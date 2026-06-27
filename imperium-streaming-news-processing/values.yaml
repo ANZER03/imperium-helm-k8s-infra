@@ -7,3 +7,7 @@
 
 strimzi-kafka-operator:
   createGlobalResources: false
+
+kafka-cluster:
+  enabled: true
+

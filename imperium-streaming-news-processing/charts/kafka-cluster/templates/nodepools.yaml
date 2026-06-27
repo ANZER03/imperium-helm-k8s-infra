@@ -1,0 +1,37 @@
+{{- range $index, $pool := .Values.nodePools }}
+{{- if $index }}
+---
+{{- end }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: {{ include "kafka-cluster.fullname" $ }}-{{ $pool.name }}
+  labels:
+    strimzi.io/cluster: {{ include "kafka-cluster.fullname" $ }}
+    {{- include "kafka-cluster.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $pool.replicas }}
+  roles:
+    {{- toYaml $pool.roles | nindent 4 }}
+  storage:
+    type: {{ $pool.storage.type }}
+    {{- if eq $pool.storage.type "persistent-claim" }}
+    size: {{ $pool.storage.size | quote }}
+    {{- if $pool.storage.class }}
+    class: {{ $pool.storage.class | quote }}
+    {{- end }}
+    deleteClaim: {{ $pool.storage.deleteClaim }}
+    {{- end }}
+    {{- if eq $pool.storage.type "jbod" }}
+    volumes:
+      {{- toYaml $pool.storage.volumes | nindent 6 }}
+    {{- end }}
+  {{- if $pool.resources }}
+  resources:
+    {{- toYaml $pool.resources | nindent 4 }}
+  {{- end }}
+  {{- if $pool.jvmOptions }}
+  jvmOptions:
+    {{- toYaml $pool.jvmOptions | nindent 4 }}
+  {{- end }}
+{{- end }}
