@@ -4,3 +4,6 @@
 # Example:
 # sub-chart-name:
 #   key: value
+
+strimzi-kafka-operator:
+  createGlobalResources: false
