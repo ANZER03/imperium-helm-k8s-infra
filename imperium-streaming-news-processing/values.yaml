@@ -1,0 +1,6 @@
+# Default values for imperium-streaming-news-processing.
+# This is an umbrella chart. Values for sub-charts can be configured here.
+#
+# Example:
+# sub-chart-name:
+#   key: value
