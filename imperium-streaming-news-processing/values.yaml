@@ -11,3 +11,7 @@ strimzi-kafka-operator:
 kafka-cluster:
   enabled: true
 
+UI:
+  enabled: true
+
+

@@ -1,0 +1,25 @@
+# Default values for kafka-ui.
+# This is a YAML-formatted file.
+
+image:
+  repository: provectuslabs/kafka-ui
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+kafka:
+  clusterName: "local"
+  # Service name and port of the bootstrap server
+  bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"

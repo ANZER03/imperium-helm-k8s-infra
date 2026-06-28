@@ -33,3 +33,6 @@ dependencies:
   - name: kafka-cluster
     version: 0.1.0
     repository: "file://./charts/kafka-cluster"
+  - name: UI
+    version: 0.1.0
+    repository: "file://./charts/UI"

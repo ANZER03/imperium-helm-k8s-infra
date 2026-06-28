@@ -1,0 +1,5 @@
+# Default values for UI.
+# This is a YAML-formatted file.
+
+kafka-ui:
+  enabled: true
