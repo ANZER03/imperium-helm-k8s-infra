@@ -22,4 +22,15 @@ schema-registry:
   kafka:
     bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
 
+kafka-connect:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "registry.registry.svc.cluster.local:5000/debezium-avro"
+    tag: "1.1.2"
+  kafka:
+    bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
+  config:
+    schemaRegistryUrl: "http://imperium-streaming-news-processing-schema-registry:8081"
+
 

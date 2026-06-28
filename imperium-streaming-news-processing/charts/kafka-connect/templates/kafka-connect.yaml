@@ -1,0 +1,22 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnect
+metadata:
+  name: {{ include "kafka-connect.fullname" . }}
+  labels:
+    {{- include "kafka-connect.labels" . | nindent 4 }}
+spec:
+  version: {{ .Values.kafka.version | quote }}
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+  replicas: {{ .Values.replicaCount }}
+  bootstrapServers: {{ .Values.kafka.bootstrapServers | quote }}
+  groupId: {{ .Values.config.groupId | quote }}
+  offsetStorageTopic: {{ .Values.config.offsetStorageTopic | quote }}
+  configStorageTopic: {{ .Values.config.configStorageTopic | quote }}
+  statusStorageTopic: {{ .Values.config.statusStorageTopic | quote }}
+  config:
+    offset.storage.replication.factor: 1
+    config.storage.replication.factor: 1
+    status.storage.replication.factor: 1
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: {{ .Values.config.schemaRegistryUrl | quote }}

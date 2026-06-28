@@ -14,5 +14,8 @@ dependencies:
 - name: schema-registry
   repository: file://./charts/schema-registry
   version: 0.1.0
-digest: sha256:89b1124ae8e4b5626b58e73c6bc7f0b6c6274bd02989e3ce72e2649e33c4dc63
-generated: "2026-06-28T01:27:16.98448782Z"
+- name: kafka-connect
+  repository: file://./charts/kafka-connect
+  version: 0.1.0
+digest: sha256:f76bae643c7492179ef974e6beadd2473e53465b5689b557580a78b58e0f002f
+generated: "2026-06-28T02:28:32.624087069Z"

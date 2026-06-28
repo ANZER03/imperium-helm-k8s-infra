@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-connect
+description: A Helm subchart for deploying Strimzi Kafka Connect with Debezium
+type: application
+version: 0.1.0
+appVersion: "1.1.0"
