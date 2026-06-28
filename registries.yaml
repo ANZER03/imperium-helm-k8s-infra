@@ -1,0 +1,7 @@
+mirrors:
+  "registry.registry.svc.cluster.local:5000":
+    endpoint:
+      - "http://10.43.210.21:5000"
+  "10.43.210.21:5000":
+    endpoint:
+      - "http://10.43.210.21:5000"

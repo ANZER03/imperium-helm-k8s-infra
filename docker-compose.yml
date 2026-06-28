@@ -12,6 +12,8 @@ services:
     volumes:
       - k3s-server-data:/var/lib/rancher/k3s
       - ./output:/output
+      - ./registries.yaml:/etc/rancher/k3s/registries.yaml
+
     ports:
       - "6443:6443"
       - "8084:80"
@@ -31,6 +33,9 @@ services:
       - K3S_TOKEN=my-secret-token
     depends_on:
       - k3s-server
+    volumes:
+      - ./registries.yaml:/etc/rancher/k3s/registries.yaml
+
     networks:
       - k3s-net
       - imperium-net
@@ -46,6 +51,9 @@ services:
       - K3S_TOKEN=my-secret-token
     depends_on:
       - k3s-server
+    volumes:
+      - ./registries.yaml:/etc/rancher/k3s/registries.yaml
+
     networks:
       - k3s-net
       - imperium-net
