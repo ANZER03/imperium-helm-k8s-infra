@@ -1,0 +1,60 @@
+services:
+  k3s-server:
+    image: rancher/k3s:v1.36.1-k3s1
+    container_name: k3s-server
+    hostname: k3s-server
+    privileged: true
+    command: server --node-name k3s-server --disable traefik
+    environment:
+      - K3S_TOKEN=my-secret-token
+      - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
+      - K3S_KUBECONFIG_MODE=666
+    volumes:
+      - k3s-server-data:/var/lib/rancher/k3s
+      - ./output:/output
+    ports:
+      - "6443:6443"
+      - "8084:80"
+      - "8443:443"
+    networks:
+      - k3s-net
+      - imperium-net
+
+  k3s-agent-1:
+    image: rancher/k3s:v1.36.1-k3s1
+    container_name: k3s-agent-1
+    hostname: k3s-agent-1
+    privileged: true
+    command: agent --node-name k3s-agent-1
+    environment:
+      - K3S_URL=https://k3s-server:6443
+      - K3S_TOKEN=my-secret-token
+    depends_on:
+      - k3s-server
+    networks:
+      - k3s-net
+      - imperium-net
+
+  k3s-agent-2:
+    image: rancher/k3s:v1.36.1-k3s1
+    container_name: k3s-agent-2
+    hostname: k3s-agent-2
+    privileged: true
+    command: agent --node-name k3s-agent-2
+    environment:
+      - K3S_URL=https://k3s-server:6443
+      - K3S_TOKEN=my-secret-token
+    depends_on:
+      - k3s-server
+    networks:
+      - k3s-net
+      - imperium-net
+
+volumes:
+  k3s-server-data:
+
+networks:
+  k3s-net:
+    driver: bridge
+  imperium-net:
+    external: true
