@@ -25,7 +25,7 @@ appVersion: "1.16.0"
 
 dependencies:
   - name: strimzi-kafka-operator
-    version: 1.1.0
+    version: 1.0.1
     repository: "https://strimzi.io/charts"
   - name: spark-operator
     version: 2.5.1
