@@ -1,0 +1,18 @@
+dependencies:
+- name: strimzi-kafka-operator
+  repository: https://strimzi.io/charts
+  version: 1.1.0
+- name: spark-operator
+  repository: https://kubeflow.github.io/spark-operator
+  version: 2.5.1
+- name: kafka-cluster
+  repository: file://./charts/kafka-cluster
+  version: 0.1.0
+- name: UI
+  repository: file://./charts/UI
+  version: 0.1.0
+- name: schema-registry
+  repository: file://./charts/schema-registry
+  version: 0.1.0
+digest: sha256:b25346ad960dfdcd6f9401ea0a18e07fec20e26d8f210328a700ccd4cc671563
+generated: "2026-06-28T00:33:32.349165278Z"

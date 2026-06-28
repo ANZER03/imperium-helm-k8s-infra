@@ -1,0 +1,25 @@
+replicaCount: 1
+
+image:
+  repository: confluentinc/cp-schema-registry
+  pullPolicy: IfNotPresent
+  tag: "7.5.0"
+
+service:
+  type: ClusterIP
+  port: 8081
+
+kafka:
+  bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 768Mi
+  requests:
+    cpu: 100m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

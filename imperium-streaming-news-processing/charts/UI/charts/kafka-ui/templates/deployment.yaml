@@ -27,5 +27,9 @@ spec:
               value: {{ .Values.kafka.clusterName | quote }}
             - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
               value: {{ .Values.kafka.bootstrapServers | quote }}
+            {{- if .Values.kafka.schemaRegistry }}
+            - name: KAFKA_CLUSTERS_0_SCHEMAREGISTRY
+              value: {{ .Values.kafka.schemaRegistry | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

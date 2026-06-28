@@ -23,3 +23,5 @@ kafka:
   clusterName: "local"
   # Service name and port of the bootstrap server
   bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
+  # Service name and port of the schema registry
+  schemaRegistry: ""

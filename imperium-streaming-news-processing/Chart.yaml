@@ -36,3 +36,6 @@ dependencies:
   - name: UI
     version: 0.1.0
     repository: "file://./charts/UI"
+  - name: schema-registry
+    version: 0.1.0
+    repository: "file://./charts/schema-registry"
