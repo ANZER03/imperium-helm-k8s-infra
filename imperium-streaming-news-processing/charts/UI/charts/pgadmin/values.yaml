@@ -1,0 +1,30 @@
+# Default values for pgadmin.
+# This is a YAML-formatted file.
+
+image:
+  repository: dpage/pgadmin4
+  pullPolicy: IfNotPresent
+  tag: "8.14"
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env:
+  email: "admin@imperium.com"
+  password: "admin"
+
+pgConnection:
+  name: "Imperium PostgreSQL"
+  host: "imperium-pg-rw"
+  port: 5432
+  db: "imperium"
+  user: "imperium"

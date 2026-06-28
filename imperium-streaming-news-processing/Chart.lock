@@ -20,5 +20,11 @@ dependencies:
 - name: opentelemetry-collector
   repository: file://./charts/opentelemetry-collector
   version: 0.159.1
-digest: sha256:95e7c37ade1c926e5695f85a0fcd81d1d0ea5de0f0a5fbc62cce53ca9bc56f48
-generated: "2026-06-28T03:02:24.767600134Z"
+- name: cloudnative-pg
+  repository: file://./charts/cloudnative-pg
+  version: 0.28.3
+- name: pg-cluster
+  repository: file://./charts/pg-cluster
+  version: 0.1.0
+digest: sha256:8f7a1c946601e0d81ebaa5877f7b2aad6dae7c3050d7c92241f094869c7d1e97
+generated: "2026-06-28T14:26:56.638929473Z"

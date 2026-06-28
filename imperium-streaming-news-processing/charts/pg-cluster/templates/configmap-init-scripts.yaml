@@ -1,0 +1,13 @@
+{{- if .Values.initScripts }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pg-cluster.fullname" . }}-init-scripts
+  labels:
+    {{- include "pg-cluster.labels" . | nindent 4 }}
+data:
+  {{- range $filename, $content := .Values.initScripts }}
+  {{ $filename }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+{{- end }}

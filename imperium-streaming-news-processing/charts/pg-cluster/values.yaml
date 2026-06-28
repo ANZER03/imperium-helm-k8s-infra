@@ -1,0 +1,45 @@
+# Default values for pg-cluster.
+# This is a YAML-formatted file.
+fullnameOverride: "imperium-pg"
+
+cluster:
+  instances: 1
+  imageName: "ghcr.io/cloudnative-pg/postgresql:17.5"
+
+  storage:
+    size: 2Gi
+    storageClass: ""  # empty = default storage class
+
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: "250m"
+    limits:
+      memory: 512Mi
+      cpu: "500m"
+
+  bootstrap:
+    initdb:
+      database: imperium
+      owner: imperium
+
+  monitoring:
+    enablePodMonitor: false
+
+auth:
+  username: imperium
+  password: imperium-secret
+
+# SQL scripts to run after database initialization.
+# Each key is a filename, value is the SQL content.
+# Scripts are executed in alphabetical order on the application database.
+initScripts: {}
+  # 01-create-tables.sql: |
+  #   CREATE TABLE IF NOT EXISTS articles (
+  #     id SERIAL PRIMARY KEY,
+  #     title TEXT NOT NULL,
+  #     content TEXT,
+  #     created_at TIMESTAMP DEFAULT NOW()
+  #   );
+  # 02-seed-data.sql: |
+  #   INSERT INTO articles (title) VALUES ('Hello World');

@@ -3,3 +3,6 @@
 
 kafka-ui:
   enabled: true
+
+pgadmin:
+  enabled: true
