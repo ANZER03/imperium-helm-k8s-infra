@@ -2,7 +2,8 @@ replicaCount: 1
 
 image:
   repository: "registry.registry.svc.cluster.local:5000/debezium-avro"
-  tag: "1.1.2"
+  tag: "1.1.3"
+
 
 kafka:
   bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
@@ -14,3 +15,8 @@ config:
   configStorageTopic: "imperium-connect-configs"
   statusStorageTopic: "imperium-connect-status"
   schemaRegistryUrl: "http://imperium-streaming-news-processing-schema-registry:8081"
+
+otel:
+  enabled: true
+  collectorEndpoint: "http://imperium-streaming-news-processing-opentelemetry-collector:4317"
+

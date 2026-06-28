@@ -20,3 +20,22 @@ spec:
     key.converter: org.apache.kafka.connect.storage.StringConverter
     value.converter: io.confluent.connect.avro.AvroConverter
     value.converter.schema.registry.url: {{ .Values.config.schemaRegistryUrl | quote }}
+  {{- if .Values.otel.enabled }}
+  template:
+    connectContainer:
+      env:
+        - name: KAFKA_OPTS
+          value: "-javaagent:/otel/otel-javaagent.jar"
+        - name: OTEL_SERVICE_NAME
+          value: "kafka-connect"
+        - name: OTEL_TRACES_EXPORTER
+          value: "otlp"
+        - name: OTEL_METRICS_EXPORTER
+          value: "otlp"
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "grpc"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: {{ .Values.otel.collectorEndpoint | quote }}
+
+  {{- end }}
+

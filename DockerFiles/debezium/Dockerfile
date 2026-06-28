@@ -18,7 +18,8 @@ COPY --from=confluent-source --chown=1001:0 /usr/share/java/kafka-serde-tools/ /
 USER kafka
 
 # Download and set up OpenTelemetry Java Agent
-# ADD --chown=1001:0 https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.27.0/opentelemetry-javaagent.jar /otel/otel-javaagent.jar
+ADD --chown=1001:0 https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.27.0/opentelemetry-javaagent.jar /otel/otel-javaagent.jar
+
 
 # ENV KAFKA_OPTS="-javaagent:/otel/otel-javaagent.jar"
 

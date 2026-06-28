@@ -17,5 +17,8 @@ dependencies:
 - name: kafka-connect
   repository: file://./charts/kafka-connect
   version: 0.1.0
-digest: sha256:f76bae643c7492179ef974e6beadd2473e53465b5689b557580a78b58e0f002f
-generated: "2026-06-28T02:28:32.624087069Z"
+- name: opentelemetry-collector
+  repository: file://./charts/opentelemetry-collector
+  version: 0.159.1
+digest: sha256:95e7c37ade1c926e5695f85a0fcd81d1d0ea5de0f0a5fbc62cce53ca9bc56f48
+generated: "2026-06-28T03:02:24.767600134Z"
