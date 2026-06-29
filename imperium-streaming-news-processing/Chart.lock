@@ -11,5 +11,8 @@ dependencies:
 - name: kafka-connect-connectors
   repository: file://charts/kafka-connect-connectors
   version: 0.1.0
-digest: sha256:a53d9d72ecc838d188c4e45894bca7fbace0255c996fbd2ae1e747a285e1c115
-generated: "2026-06-29T12:59:55.939759156Z"
+- name: kafka-connect-sinks
+  repository: file://charts/kafka-connect-sinks
+  version: 0.1.0
+digest: sha256:c471557ac040fa3d3c42414b45641e763351ef2a8d396876469b08c3743762c7
+generated: "2026-06-29T15:13:35.101884609Z"

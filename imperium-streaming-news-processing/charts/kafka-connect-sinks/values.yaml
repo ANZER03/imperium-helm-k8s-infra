@@ -1,0 +1,21 @@
+# PostgreSQL target database (application user credentials)
+postgres:
+  host: imperium-pg-rw
+  port: 5432
+  database: imperium
+  appUser: "imperium"
+  appPassword: "imperium-secret"
+
+# Kafka cluster bootstrap
+kafka:
+  bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
+
+# Name of the KafkaConnect cluster resource
+connect:
+  clusterName: "imperium-streaming-news-processing-kafka-connect"
+
+# Country Sink configuration
+countriesSink:
+  enabled: false
+  name: imperium-countries-sink
+  tasksMax: 1

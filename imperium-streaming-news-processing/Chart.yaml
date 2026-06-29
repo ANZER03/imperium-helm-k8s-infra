@@ -38,3 +38,7 @@ dependencies:
     version: 0.1.0
     repository: "file://charts/kafka-connect-connectors"
     condition: kafka-connect-connectors.enabled
+  - name: kafka-connect-sinks
+    version: 0.1.0
+    repository: "file://charts/kafka-connect-sinks"
+    condition: kafka-connect-sinks.enabled

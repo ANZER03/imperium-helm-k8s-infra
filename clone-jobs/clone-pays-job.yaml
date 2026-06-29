@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clone-pays-script
+data:
+  clone.py: |
+    import os
+    import psycopg2
+
+    source_uri = os.getenv("SOURCE_URI", "postgresql://postgres:postgres@news-source-db:5432/imperium-news-source")
+    target_uri = os.getenv("TARGET_URI", "postgresql://imperium:imperium-secret@imperium-pg-rw:5432/imperium")
+
+    def main():
+        print("Connecting to source database...")
+        conn_src = psycopg2.connect(source_uri)
+        cur_src = conn_src.cursor()
+
+        print("Fetching data from table_pays...")
+        cur_src.execute("SELECT id, pays, abr FROM table_pays;")
+        rows = cur_src.fetchall()
+        print(f"Fetched {len(rows)} rows.")
+
+        print("Connecting to target database...")
+        conn_tgt = psycopg2.connect(target_uri)
+        cur_tgt = conn_tgt.cursor()
+
+        print("Inserting data into target database...")
+        insert_query = """
+            INSERT INTO table_pays (id, pays, abr) 
+            VALUES (%s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET 
+                pays = EXCLUDED.pays, 
+                abr = EXCLUDED.abr;
+        """
+        for row in rows:
+            cur_tgt.execute(insert_query, row)
+
+        conn_tgt.commit()
+        print("Data cloned successfully!")
+
+        cur_src.close()
+        conn_src.close()
+        cur_tgt.close()
+        conn_tgt.close()
+
+    if __name__ == "__main__":
+        main()
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: clone-pays-job
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      containers:
+      - name: cloner
+        image: python:3.11-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - pip install psycopg2-binary && python /scripts/clone.py
+        volumeMounts:
+        - name: script-volume
+          mountPath: /scripts
+        env:
+        - name: SOURCE_URI
+          # Connected via docker bridge network IP of imperium-news-source-db
+          value: "postgresql://postgres:postgres@172.18.0.2:5432/imperium-news-source"
+        - name: TARGET_URI
+          value: "postgresql://imperium:imperium-secret@imperium-pg-rw:5432/imperium"
+      restartPolicy: Never
+      volumes:
+      - name: script-volume
+        configMap:
+          name: clone-pays-script

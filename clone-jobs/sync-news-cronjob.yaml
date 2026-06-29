@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sync-news-script
+data:
+  sync_news.py: |
+    import os
+    import sys
+    import psycopg2
+    from psycopg2.extras import execute_values
+
+    source_uri = os.getenv("SOURCE_URI")
+    target_uri = os.getenv("TARGET_URI")
+    batch_size = int(os.getenv("BATCH_SIZE", "10000"))
+
+    def get_columns(cursor, table_name):
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = %s 
+            ORDER BY ordinal_position;
+        """, (table_name,))
+        return [row[0] for row in cursor.fetchall()]
+
+    def main():
+        print("Connecting to databases...")
+        conn_src = psycopg2.connect(source_uri)
+        conn_tgt = psycopg2.connect(target_uri)
+        cur_src = conn_src.cursor()
+        cur_tgt = conn_tgt.cursor()
+
+        # Ensure sync_state table exists in target
+        cur_tgt.execute("""
+            CREATE TABLE IF NOT EXISTS public.sync_state (
+                key VARCHAR(50) PRIMARY KEY,
+                value BIGINT NOT NULL
+            );
+        """)
+        conn_tgt.commit()
+
+        # Get last imported news ID
+        cur_tgt.execute("SELECT value FROM public.sync_state WHERE key = 'last_news_id';")
+        row = cur_tgt.fetchone()
+        
+        if row is not None:
+            last_news_id = row[0]
+            print(f"Loaded last_news_id from sync_state: {last_news_id}")
+        else:
+            # State not initialized. Let's check target table_news count/max
+            cur_tgt.execute("SELECT MAX(id) FROM public.table_news;")
+            max_target_id = cur_tgt.fetchone()[0]
+            
+            if max_target_id is not None:
+                last_news_id = max_target_id
+                print(f"Target table_news is not empty. Initializing last_news_id from target MAX(id): {last_news_id}")
+            else:
+                # Target is completely empty. We don't want to copy all 570M historical rows.
+                # We initialize it to the current MAX(id) of the SOURCE database.
+                cur_src.execute("SELECT MAX(id) FROM public.table_news;")
+                max_source_id = cur_src.fetchone()[0]
+                if max_source_id is not None:
+                    last_news_id = max_source_id
+                    print(f"Target is empty. Initializing last_news_id from source MAX(id) to sync only new news: {last_news_id}")
+                else:
+                    last_news_id = 0
+                    print("Both target and source databases appear to have no news. Starting from 0.")
+
+            # Save initial state
+            cur_tgt.execute("""
+                INSERT INTO public.sync_state (key, value) VALUES ('last_news_id', %s)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+            """, (last_news_id,))
+            conn_tgt.commit()
+
+        # Get columns of table_news
+        columns = get_columns(cur_src, 'table_news')
+        if not columns:
+            print("Error: table_news not found in source database.")
+            sys.exit(1)
+
+        cols_str = ", ".join(columns)
+
+        # We do INSERT ON CONFLICT DO UPDATE to be idempotent
+        non_pk_cols = [c for c in columns if c != 'id']
+        if non_pk_cols:
+            update_str = ", ".join([f"{c} = EXCLUDED.{c}" for c in non_pk_cols])
+            upsert_query = f"""
+                INSERT INTO public.table_news ({cols_str})
+                VALUES %s
+                ON CONFLICT (id) DO UPDATE SET {update_str};
+            """
+        else:
+            upsert_query = f"""
+                INSERT INTO public.table_news ({cols_str})
+                VALUES %s
+                ON CONFLICT (id) DO NOTHING;
+            """
+
+        # Fetch new news from source
+        print(f"Fetching news with id > {last_news_id} (Limit: {batch_size})...")
+        cur_src.execute(f"""
+            SELECT {cols_str} 
+            FROM public.table_news 
+            WHERE id > %s 
+            ORDER BY id ASC 
+            LIMIT %s;
+        """, (last_news_id, batch_size))
+        
+        rows = cur_src.fetchall()
+        
+        if rows:
+            new_max_id = max(row[columns.index('id')] for row in rows)
+            print(f"Fetched {len(rows)} new rows. New max ID will be: {new_max_id}")
+            
+            # Insert into target
+            print("Inserting into target table_news...")
+            execute_values(cur_tgt, upsert_query, rows, page_size=2000)
+            
+            # Update state
+            cur_tgt.execute("UPDATE public.sync_state SET value = %s WHERE key = 'last_news_id';", (new_max_id,))
+            
+            conn_tgt.commit()
+            print("Sync completed and committed successfully!")
+        else:
+            print("No new news found.")
+
+        cur_src.close()
+        cur_tgt.close()
+        conn_src.close()
+        conn_tgt.close()
+
+    if __name__ == "__main__":
+        main()
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sync-news-cronjob
+spec:
+  schedule: "*/1 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cloner
+            image: python:3.11-slim
+            command: ["/bin/sh", "-c"]
+            args:
+              - pip install psycopg2-binary && python -u /scripts/sync_news.py
+            volumeMounts:
+            - name: script-volume
+              mountPath: /scripts
+            env:
+            - name: SOURCE_URI
+              value: "postgresql://postgres:postgres@172.18.0.2:5432/imperium-news-source"
+            - name: TARGET_URI
+              value: "postgresql://imperium:imperium-secret@imperium-pg-rw:5432/imperium"
+            - name: BATCH_SIZE
+              value: "10000"
+          restartPolicy: OnFailure
+          volumes:
+          - name: script-volume
+            configMap:
+              name: sync-news-script

@@ -72,9 +72,9 @@ kafka-connect-connectors:
     clusterName: "imperium-streaming-news-processing-kafka-connect"
   # Snapshot connectors disabled per user request
   reference:
-    enabled: false
+    enabled: true
   metadata:
-    enabled: false
+    enabled: true
   news:
     enabled: true
   # Test connectors (off by default; flip to true to validate CDC)
@@ -82,3 +82,19 @@ kafka-connect-connectors:
     enabled: false
   testStream:
     enabled: false
+
+kafka-connect-sinks:
+  enabled: true
+  postgres:
+    host: imperium-pg-rw
+    port: 5432
+    database: imperium
+    appUser: "imperium"
+    appPassword: "imperium-secret"
+  kafka:
+    bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
+  connect:
+    clusterName: "imperium-streaming-news-processing-kafka-connect"
+  countriesSink:
+    enabled: true
+

@@ -1,0 +1,32 @@
+{{- if .Values.countriesSink.enabled }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.countriesSink.name }}
+  labels:
+    {{- include "kafka-connect-sinks.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.jdbc.JdbcSinkConnector
+  tasksMax: {{ .Values.countriesSink.tasksMax }}
+  config:
+    connection.url: "jdbc:postgresql://{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+    connection.username: {{ .Values.postgres.appUser | quote }}
+    connection.password: {{ .Values.postgres.appPassword | quote }}
+    connection.driver.class: "org.postgresql.Driver"
+    
+    topics: "imperium.reference.public.table_pays"
+    table.name.format: "public.imperium_dim_countries"
+    insert.mode: "upsert"
+    primary.key.mode: "record_value"
+    primary.key.fields: "country_id"
+    schema.evolution: "none"
+    
+    transforms: "unwrap,rename"
+    transforms.unwrap.type: "io.debezium.transforms.ExtractNewRecordState"
+    transforms.unwrap.drop.tombstones: "true"
+    
+    transforms.rename.type: "org.apache.kafka.connect.transforms.ReplaceField$Value"
+    transforms.rename.include: "id,pays"
+    transforms.rename.renames: "id:country_id,pays:country_name"
+{{- end }}

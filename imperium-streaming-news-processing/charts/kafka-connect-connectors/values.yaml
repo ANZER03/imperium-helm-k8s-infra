@@ -6,8 +6,6 @@ postgres:
   port: 5432
   database: imperium
   user: debezium
-  # Password for the debezium user — stored in a Secret created by this chart.
-  # Override with a strong value in production via --set or a sealed secret.
   password: "debezium-secret"
 
 # Kafka cluster bootstrap
@@ -29,9 +27,9 @@ connect:
 # ---------------------------------------------------------------------------
 reference:
   enabled: true
-  name: imperium-reference-cdc
+  name: imperium-reference-cdc-v2
   topicPrefix: imperium.reference
-  slotName: debezium_reference_slot
+  slotName: debezium_reference_slot_v2
   publicationName: imperium_reference_publication
   # Comma-separated list (Debezium expects this format in KafkaConnector config)
   tables: "public.table_pays,public.table_langue,public.table_rubrique,public.table_sedition"
@@ -45,11 +43,11 @@ reference:
 # ---------------------------------------------------------------------------
 metadata:
   enabled: true
-  name: imperium-metadata-cdc
+  name: imperium-metadata-cdc-v2
   topicPrefix: imperium.metadata
-  slotName: debezium_metadata_slot
+  slotName: debezium_metadata_slot_v2
   publicationName: imperium_metadata_publication
-  tables: "public.table_authority,public.table_links,public.debezium_signal"
+  tables: "public.table_authority,public.table_links"
   snapshotMode: initial_only
   signalTopic: imperium.metadata.signals
   schemaHistoryTopic: imperium.metadata.schema-history

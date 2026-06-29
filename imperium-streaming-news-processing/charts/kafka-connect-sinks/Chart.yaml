@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-connect-sinks
+description: Deploys Strimzi KafkaConnector CRs for JDBC Sink Connectors (countries, etc.)
+type: application
+version: 0.1.0
+appVersion: "2.7.4"
