@@ -1,0 +1,40 @@
+{{- if .Values.metadata.enabled }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.metadata.name }}
+  labels:
+    {{- include "kafka-connect-connectors.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.postgresql.PostgresConnector
+  tasksMax: {{ .Values.metadata.tasksMax }}
+  config:
+    # ── PostgreSQL source ──────────────────────────────────────────────────
+    database.hostname: {{ .Values.postgres.host | quote }}
+    database.port: {{ .Values.postgres.port | quote }}
+    database.user: {{ .Values.postgres.user | quote }}
+    database.password: {{ .Values.postgres.password | quote }}
+    database.dbname: {{ .Values.postgres.database | quote }}
+    # ── Connector identity ─────────────────────────────────────────────────
+    topic.prefix: {{ .Values.metadata.topicPrefix | quote }}
+    plugin.name: pgoutput
+    slot.name: {{ .Values.metadata.slotName | quote }}
+    publication.name: {{ .Values.metadata.publicationName | quote }}
+    publication.autocreate.mode: "disabled"
+    table.include.list: {{ .Values.metadata.tables | quote }}
+    # ── Snapshot: full initial capture, then stream changes ────────────────
+    snapshot.mode: {{ .Values.metadata.snapshotMode | quote }}
+    incremental.snapshot.chunk.size: {{ .Values.metadata.incrementalSnapshotChunkSize | quote }}
+    # ── Signal channels (source table + Kafka topic) ───────────────────────
+    signal.enabled.channels: "source,kafka"
+    signal.data.collection: "public.debezium_signal"
+    signal.kafka.bootstrap.servers: {{ .Values.kafka.bootstrapServers | quote }}
+    signal.kafka.topic: {{ .Values.metadata.signalTopic | quote }}
+    # ── Schema history stored in Kafka ─────────────────────────────────────
+    schema.history.internal.kafka.bootstrap.servers: {{ .Values.kafka.bootstrapServers | quote }}
+    schema.history.internal.kafka.topic: {{ .Values.metadata.schemaHistoryTopic | quote }}
+    # ── Common tuning ──────────────────────────────────────────────────────
+    tombstones.on.delete: "false"
+    heartbeat.interval.ms: "10000"
+{{- end }}

@@ -618,3 +618,49 @@ initScripts:
 
         CREATE INDEX IF NOT EXISTS imperium_projection_state_root_topic_idx
             ON imperium_projection_state (root_topic_id);
+    # ---------------------------------------------------------------------------
+    # CDC test tables — used to validate Debezium connector modes
+    # test_snapshot → initial_only connector (captures existing rows, then stops)
+    # test_stream   → never connector (pure streaming, backfill via signal)
+    # ---------------------------------------------------------------------------
+    99_cdc_test_tables.sql: |
+        -- Table for testing snapshot.mode=initial_only
+        -- Pre-populate with a few rows; the reference-style connector should
+        -- pick them up on first start and stop without streaming.
+        CREATE TABLE IF NOT EXISTS public.test_snapshot
+        (
+            id    serial      PRIMARY KEY,
+            label text        NOT NULL,
+            value integer     NOT NULL DEFAULT 0,
+            created_at timestamp without time zone NOT NULL DEFAULT now()
+        );
+
+        -- Insert seed rows so the snapshot connector has something to capture
+        INSERT INTO public.test_snapshot (label, value) VALUES
+            ('alpha',   1),
+            ('beta',    2),
+            ('gamma',   3)
+        ON CONFLICT DO NOTHING;
+
+        -- Table for testing snapshot.mode=never (stream-only)
+        -- Connector starts with no data; rows written after start are streamed.
+        CREATE TABLE IF NOT EXISTS public.test_stream
+        (
+            id         serial      PRIMARY KEY,
+            event_type text        NOT NULL,
+            payload    text        NOT NULL DEFAULT '',
+            created_at timestamp without time zone NOT NULL DEFAULT now()
+        );
+
+        -- Publications for the test connectors
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'imperium_test_snapshot_publication') THEN
+                CREATE PUBLICATION imperium_test_snapshot_publication FOR TABLE public.test_snapshot;
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'imperium_test_stream_publication') THEN
+                CREATE PUBLICATION imperium_test_stream_publication FOR TABLE public.test_stream, public.debezium_signal;
+            END IF;
+        END
+        $$;

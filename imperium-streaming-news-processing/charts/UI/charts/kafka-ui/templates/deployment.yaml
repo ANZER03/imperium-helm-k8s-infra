@@ -31,5 +31,11 @@ spec:
             - name: KAFKA_CLUSTERS_0_SCHEMAREGISTRY
               value: {{ .Values.kafka.schemaRegistry | quote }}
             {{- end }}
+            {{- if .Values.kafka.kafkaConnectAddress }}
+            - name: KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME
+              value: "imperium-connect"
+            - name: KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS
+              value: {{ .Values.kafka.kafkaConnectAddress | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

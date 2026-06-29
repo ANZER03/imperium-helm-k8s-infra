@@ -1,0 +1,34 @@
+{{- if .Values.reference.enabled }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.reference.name }}
+  labels:
+    {{- include "kafka-connect-connectors.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.postgresql.PostgresConnector
+  tasksMax: {{ .Values.reference.tasksMax }}
+  config:
+    # ── PostgreSQL source ──────────────────────────────────────────────────
+    database.hostname: {{ .Values.postgres.host | quote }}
+    database.port: {{ .Values.postgres.port | quote }}
+    database.user: {{ .Values.postgres.user | quote }}
+    database.password: {{ .Values.postgres.password | quote }}
+    database.dbname: {{ .Values.postgres.database | quote }}
+    # ── Connector identity ─────────────────────────────────────────────────
+    topic.prefix: {{ .Values.reference.topicPrefix | quote }}
+    plugin.name: pgoutput
+    slot.name: {{ .Values.reference.slotName | quote }}
+    publication.name: {{ .Values.reference.publicationName | quote }}
+    publication.autocreate.mode: "disabled"
+    table.include.list: {{ .Values.reference.tables | quote }}
+    # ── Snapshot: capture all rows once, then stop ─────────────────────────
+    snapshot.mode: initial_only
+    # ── Schema history stored in Kafka ─────────────────────────────────────
+    schema.history.internal.kafka.bootstrap.servers: {{ .Values.kafka.bootstrapServers | quote }}
+    schema.history.internal.kafka.topic: {{ .Values.reference.schemaHistoryTopic | quote }}
+    # ── Common tuning ──────────────────────────────────────────────────────
+    tombstones.on.delete: "false"
+    heartbeat.interval.ms: "10000"
+{{- end }}

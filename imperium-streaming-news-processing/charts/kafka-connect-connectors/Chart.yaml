@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-connect-connectors
+description: Deploys Strimzi KafkaConnector CRs for Debezium PostgreSQL CDC (reference, metadata, news)
+type: application
+version: 0.1.0
+appVersion: "2.7.4"

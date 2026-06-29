@@ -8,5 +8,8 @@ dependencies:
 - name: llama-cpp
   repository: file://charts/llama-cpp
   version: 0.1.0
-digest: sha256:16d8b3b7f172928298815b4555efe66f109ea715e00854cba6c003f8143e6f42
-generated: "2026-06-29T00:55:49.189325506Z"
+- name: kafka-connect-connectors
+  repository: file://charts/kafka-connect-connectors
+  version: 0.1.0
+digest: sha256:a53d9d72ecc838d188c4e45894bca7fbace0255c996fbd2ae1e747a285e1c115
+generated: "2026-06-29T12:59:55.939759156Z"

@@ -4,6 +4,8 @@ metadata:
   name: {{ include "kafka-connect.fullname" . }}
   labels:
     {{- include "kafka-connect.labels" . | nindent 4 }}
+  annotations:
+    strimzi.io/use-connector-resources: "true"
 spec:
   version: {{ .Values.kafka.version | quote }}
   image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

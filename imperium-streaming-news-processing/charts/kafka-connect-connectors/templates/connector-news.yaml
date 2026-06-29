@@ -1,0 +1,51 @@
+{{- if .Values.news.enabled }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.news.name }}
+  labels:
+    {{- include "kafka-connect-connectors.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.postgresql.PostgresConnector
+  tasksMax: {{ .Values.news.tasksMax }}
+  config:
+    # ── PostgreSQL source ──────────────────────────────────────────────────
+    database.hostname: {{ .Values.postgres.host | quote }}
+    database.port: {{ .Values.postgres.port | quote }}
+    database.user: {{ .Values.postgres.user | quote }}
+    database.password: {{ .Values.postgres.password | quote }}
+    database.dbname: {{ .Values.postgres.database | quote }}
+    # ── Connector identity ─────────────────────────────────────────────────
+    topic.prefix: {{ .Values.news.topicPrefix | quote }}
+    plugin.name: pgoutput
+    slot.name: {{ .Values.news.slotName | quote }}
+    publication.name: {{ .Values.news.publicationName | quote }}
+    publication.autocreate.mode: "disabled"
+    table.include.list: {{ .Values.news.table | quote }}
+    # ── Snapshot: never — stream-only, backfill via signal ─────────────────
+    snapshot.mode: never
+    # ── Signal channels ────────────────────────────────────────────────────
+    signal.enabled.channels: "source,kafka"
+    signal.data.collection: "public.debezium_signal"
+    signal.kafka.bootstrap.servers: {{ .Values.kafka.bootstrapServers | quote }}
+    signal.kafka.topic: {{ .Values.news.signalTopic | quote }}
+    # ── Schema history stored in Kafka ─────────────────────────────────────
+    schema.history.internal.kafka.bootstrap.servers: {{ .Values.kafka.bootstrapServers | quote }}
+    schema.history.internal.kafka.topic: {{ .Values.news.schemaHistoryTopic | quote }}
+    # ── Common tuning ──────────────────────────────────────────────────────
+    tombstones.on.delete: "false"
+    heartbeat.interval.ms: "10000"
+    max.queue.size: "65536"
+    max.batch.size: "8192"
+    poll.interval.ms: "500"
+    # ── Producer overrides (large article payloads, lz4 compression) ───────
+    producer.override.buffer.memory: "536870912"
+    producer.override.batch.size: "524288"
+    producer.override.linger.ms: "100"
+    producer.override.max.request.size: "10485760"
+    producer.override.max.block.ms: "300000"
+    producer.override.request.timeout.ms: "120000"
+    producer.override.delivery.timeout.ms: "300000"
+    producer.override.compression.type: lz4
+{{- end }}

@@ -1,0 +1,31 @@
+{{- if .Values.testSnapshot.enabled }}
+# Test connector: validates snapshot.mode=initial_only
+# Enable with: --set kafka-connect-connectors.testSnapshot.enabled=true
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.testSnapshot.name }}
+  labels:
+    {{- include "kafka-connect-connectors.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.postgresql.PostgresConnector
+  tasksMax: {{ .Values.testSnapshot.tasksMax }}
+  config:
+    database.hostname: {{ .Values.postgres.host | quote }}
+    database.port: {{ .Values.postgres.port | quote }}
+    database.user: {{ .Values.postgres.user | quote }}
+    database.password: {{ .Values.postgres.password | quote }}
+    database.dbname: {{ .Values.postgres.database | quote }}
+    topic.prefix: {{ .Values.testSnapshot.topicPrefix | quote }}
+    plugin.name: pgoutput
+    slot.name: {{ .Values.testSnapshot.slotName | quote }}
+    publication.name: {{ .Values.testSnapshot.publicationName | quote }}
+    publication.autocreate.mode: "disabled"
+    table.include.list: {{ .Values.testSnapshot.tables | quote }}
+    snapshot.mode: initial_only
+    schema.history.internal.kafka.bootstrap.servers: {{ .Values.kafka.bootstrapServers | quote }}
+    schema.history.internal.kafka.topic: {{ .Values.testSnapshot.schemaHistoryTopic | quote }}
+    tombstones.on.delete: "false"
+    heartbeat.interval.ms: "10000"
+{{- end }}

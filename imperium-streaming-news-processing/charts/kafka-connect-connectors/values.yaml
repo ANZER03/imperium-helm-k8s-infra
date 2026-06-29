@@ -1,0 +1,97 @@
+# Default values for kafka-connect-connectors.
+
+# PostgreSQL source (Debezium CDC user)
+postgres:
+  host: imperium-pg-rw
+  port: 5432
+  database: imperium
+  user: debezium
+  # Password for the debezium user — stored in a Secret created by this chart.
+  # Override with a strong value in production via --set or a sealed secret.
+  password: "debezium-secret"
+
+# Kafka cluster bootstrap
+kafka:
+  bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
+
+# Schema Registry (used by Debezium Avro converters)
+schemaRegistry:
+  url: "http://imperium-streaming-news-processing-schema-registry:8081"
+
+# Name of the KafkaConnect cluster resource that connectors will bind to.
+# Must match spec.name of the KafkaConnect CR deployed by the kafka-connect sub-chart.
+connect:
+  clusterName: "imperium-streaming-news-processing-kafka-connect"
+
+# ---------------------------------------------------------------------------
+# Reference connector — snapshot.mode: initial_only
+# Captures reference/lookup tables once at startup; no streaming.
+# ---------------------------------------------------------------------------
+reference:
+  enabled: true
+  name: imperium-reference-cdc
+  topicPrefix: imperium.reference
+  slotName: debezium_reference_slot
+  publicationName: imperium_reference_publication
+  # Comma-separated list (Debezium expects this format in KafkaConnector config)
+  tables: "public.table_pays,public.table_langue,public.table_rubrique,public.table_sedition"
+  schemaHistoryTopic: imperium.reference.schema-history
+  tasksMax: 1
+
+# ---------------------------------------------------------------------------
+# Metadata connector — snapshot.mode: initial_only
+# Streams table_authority & table_links; initial snapshot at first start.
+# Backfill signals sent via Kafka topic.
+# ---------------------------------------------------------------------------
+metadata:
+  enabled: true
+  name: imperium-metadata-cdc
+  topicPrefix: imperium.metadata
+  slotName: debezium_metadata_slot
+  publicationName: imperium_metadata_publication
+  tables: "public.table_authority,public.table_links,public.debezium_signal"
+  snapshotMode: initial_only
+  signalTopic: imperium.metadata.signals
+  schemaHistoryTopic: imperium.metadata.schema-history
+  incrementalSnapshotChunkSize: "1024"
+  tasksMax: 1
+
+# ---------------------------------------------------------------------------
+# News connector — snapshot.mode: never
+# Pure streaming; no initial snapshot. Backfill triggered via signal.
+# ---------------------------------------------------------------------------
+news:
+  enabled: true
+  name: imperium-news-cdc
+  topicPrefix: imperium.news
+  slotName: debezium_news_slot
+  publicationName: imperium_news_publication
+  table: "public.table_news"
+  snapshotMode: never
+  signalTopic: imperium.news.signals
+  schemaHistoryTopic: imperium.news.schema-history
+  tasksMax: 1
+
+# ---------------------------------------------------------------------------
+# Test connectors (disabled by default — enable to validate CDC modes)
+# ---------------------------------------------------------------------------
+testSnapshot:
+  enabled: false
+  name: imperium-test-snapshot-cdc
+  topicPrefix: imperium.test.snapshot
+  slotName: debezium_test_snapshot_slot
+  publicationName: imperium_test_snapshot_publication
+  tables: "public.test_snapshot"
+  schemaHistoryTopic: imperium.test.snapshot.schema-history
+  tasksMax: 1
+
+testStream:
+  enabled: false
+  name: imperium-test-stream-cdc
+  topicPrefix: imperium.test.stream
+  slotName: debezium_test_stream_slot
+  publicationName: imperium_test_stream_publication
+  table: "public.test_stream"
+  signalTopic: imperium.test.stream.signals
+  schemaHistoryTopic: imperium.test.stream.schema-history
+  tasksMax: 1

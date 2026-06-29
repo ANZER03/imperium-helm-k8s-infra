@@ -34,5 +34,7 @@ dependencies:
     version: 0.1.0
     repository: "file://charts/llama-cpp"
     condition: llama-cpp.enabled
-
-
+  - name: kafka-connect-connectors
+    version: 0.1.0
+    repository: "file://charts/kafka-connect-connectors"
+    condition: kafka-connect-connectors.enabled

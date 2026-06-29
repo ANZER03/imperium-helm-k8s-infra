@@ -1,0 +1,35 @@
+{{- if .Values.testStream.enabled }}
+# Test connector: validates snapshot.mode=never (stream-only)
+# Enable with: --set kafka-connect-connectors.testStream.enabled=true
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.testStream.name }}
+  labels:
+    {{- include "kafka-connect-connectors.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.postgresql.PostgresConnector
+  tasksMax: {{ .Values.testStream.tasksMax }}
+  config:
+    database.hostname: {{ .Values.postgres.host | quote }}
+    database.port: {{ .Values.postgres.port | quote }}
+    database.user: {{ .Values.postgres.user | quote }}
+    database.password: {{ .Values.postgres.password | quote }}
+    database.dbname: {{ .Values.postgres.database | quote }}
+    topic.prefix: {{ .Values.testStream.topicPrefix | quote }}
+    plugin.name: pgoutput
+    slot.name: {{ .Values.testStream.slotName | quote }}
+    publication.name: {{ .Values.testStream.publicationName | quote }}
+    publication.autocreate.mode: "disabled"
+    table.include.list: {{ .Values.testStream.table | quote }}
+    snapshot.mode: never
+    signal.enabled.channels: "source,kafka"
+    signal.data.collection: "public.debezium_signal"
+    signal.kafka.bootstrap.servers: {{ .Values.kafka.bootstrapServers | quote }}
+    signal.kafka.topic: {{ .Values.testStream.signalTopic | quote }}
+    schema.history.internal.kafka.bootstrap.servers: {{ .Values.kafka.bootstrapServers | quote }}
+    schema.history.internal.kafka.topic: {{ .Values.testStream.schemaHistoryTopic | quote }}
+    tombstones.on.delete: "false"
+    heartbeat.interval.ms: "10000"
+{{- end }}

@@ -16,6 +16,7 @@ UI:
   kafka-ui:
     kafka:
       schemaRegistry: "http://imperium-streaming-news-processing-schema-registry:8081"
+      kafkaConnectAddress: "http://imperium-streaming-news-processing-kafka-connect-connect-api:8083"
   pgadmin:
     enabled: true
   redisinsight:
@@ -55,3 +56,29 @@ redis:
 llama-cpp:
   enabled: true
 
+kafka-connect-connectors:
+  enabled: true
+  postgres:
+    host: imperium-pg-rw
+    port: 5432
+    database: imperium
+    user: debezium
+    password: "debezium-secret"
+  kafka:
+    bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
+  schemaRegistry:
+    url: "http://imperium-streaming-news-processing-schema-registry:8081"
+  connect:
+    clusterName: "imperium-streaming-news-processing-kafka-connect"
+  # Snapshot connectors disabled per user request
+  reference:
+    enabled: false
+  metadata:
+    enabled: false
+  news:
+    enabled: true
+  # Test connectors (off by default; flip to true to validate CDC)
+  testSnapshot:
+    enabled: false
+  testStream:
+    enabled: false
