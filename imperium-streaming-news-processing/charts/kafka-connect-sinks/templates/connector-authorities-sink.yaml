@@ -1,0 +1,36 @@
+{{- if .Values.authoritiesSink.enabled }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.authoritiesSink.name }}
+  labels:
+    {{- include "kafka-connect-sinks.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.jdbc.JdbcSinkConnector
+  tasksMax: {{ .Values.authoritiesSink.tasksMax }}
+  config:
+    connection.url: "jdbc:postgresql://{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+    connection.username: {{ .Values.postgres.appUser | quote }}
+    connection.password: {{ .Values.postgres.appPassword | quote }}
+    connection.driver.class: "org.postgresql.Driver"
+    
+    topics: "imperium.metadata.public.table_authority"
+    table.name.format: "public.imperium_dim_authorities"
+    insert.mode: "upsert"
+    primary.key.mode: "record_value"
+    primary.key.fields: "authority_id"
+    schema.evolution: "none"
+    
+    transforms: "unwrap,rename,addPayload"
+    transforms.unwrap.type: "io.debezium.transforms.ExtractNewRecordState"
+    transforms.unwrap.drop.tombstones: "true"
+    
+    transforms.rename.type: "org.apache.kafka.connect.transforms.ReplaceField$Value"
+    transforms.rename.include: "id,authority,domain,sedition_id,actif"
+    transforms.rename.renames: "id:authority_id,authority:source_name,domain:source_domain,actif:is_active"
+
+    transforms.addPayload.type: "org.apache.kafka.connect.transforms.InsertField$Value"
+    transforms.addPayload.static.field: "payload"
+    transforms.addPayload.static.value: "{}"
+{{- end }}

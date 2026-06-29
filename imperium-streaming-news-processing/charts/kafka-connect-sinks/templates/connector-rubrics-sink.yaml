@@ -1,0 +1,32 @@
+{{- if .Values.rubricsSink.enabled }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.rubricsSink.name }}
+  labels:
+    {{- include "kafka-connect-sinks.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.jdbc.JdbcSinkConnector
+  tasksMax: {{ .Values.rubricsSink.tasksMax }}
+  config:
+    connection.url: "jdbc:postgresql://{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+    connection.username: {{ .Values.postgres.appUser | quote }}
+    connection.password: {{ .Values.postgres.appPassword | quote }}
+    connection.driver.class: "org.postgresql.Driver"
+    
+    topics: "imperium.reference.public.table_rubrique"
+    table.name.format: "public.imperium_dim_rubrics"
+    insert.mode: "upsert"
+    primary.key.mode: "record_value"
+    primary.key.fields: "rubric_id"
+    schema.evolution: "none"
+    
+    transforms: "unwrap,rename"
+    transforms.unwrap.type: "io.debezium.transforms.ExtractNewRecordState"
+    transforms.unwrap.drop.tombstones: "true"
+    
+    transforms.rename.type: "org.apache.kafka.connect.transforms.ReplaceField$Value"
+    transforms.rename.include: "id,rubrique"
+    transforms.rename.renames: "id:rubric_id,rubrique:rubric_title"
+{{- end }}

@@ -1,0 +1,36 @@
+{{- if .Values.linksSink.enabled }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: {{ .Values.linksSink.name }}
+  labels:
+    {{- include "kafka-connect-sinks.labels" . | nindent 4 }}
+    strimzi.io/cluster: {{ .Values.connect.clusterName | quote }}
+spec:
+  class: io.debezium.connector.jdbc.JdbcSinkConnector
+  tasksMax: {{ .Values.linksSink.tasksMax }}
+  config:
+    connection.url: "jdbc:postgresql://{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+    connection.username: {{ .Values.postgres.appUser | quote }}
+    connection.password: {{ .Values.postgres.appPassword | quote }}
+    connection.driver.class: "org.postgresql.Driver"
+    
+    topics: "imperium.metadata.public.table_links"
+    table.name.format: "public.imperium_dim_links"
+    insert.mode: "upsert"
+    primary.key.mode: "record_value"
+    primary.key.fields: "link_id"
+    schema.evolution: "none"
+    
+    transforms: "unwrap,rename,addPayload"
+    transforms.unwrap.type: "io.debezium.transforms.ExtractNewRecordState"
+    transforms.unwrap.drop.tombstones: "true"
+    
+    transforms.rename.type: "org.apache.kafka.connect.transforms.ReplaceField$Value"
+    transforms.rename.include: "id,link,pays_id,title,actif"
+    transforms.rename.renames: "id:link_id,link:url,pays_id:country_id,title:source_name,actif:is_active"
+
+    transforms.addPayload.type: "org.apache.kafka.connect.transforms.InsertField$Value"
+    transforms.addPayload.static.field: "payload"
+    transforms.addPayload.static.value: "{}"
+{{- end }}

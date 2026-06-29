@@ -19,3 +19,33 @@ countriesSink:
   enabled: true
   name: imperium-countries-sink-v2
   tasksMax: 1
+
+# Language Sink configuration
+languagesSink:
+  enabled: true
+  name: imperium-languages-sink
+  tasksMax: 1
+
+# Authority Sink configuration
+authoritiesSink:
+  enabled: false
+  name: imperium-authorities-sink
+  tasksMax: 1
+
+# Rubric Sink configuration
+rubricsSink:
+  enabled: false
+  name: imperium-rubrics-sink
+  tasksMax: 1
+
+# Sedition Sink configuration
+seditionsSink:
+  enabled: false
+  name: imperium-seditions-sink
+  tasksMax: 1
+
+# Link Sink configuration
+linksSink:
+  enabled: false
+  name: imperium-links-sink
+  tasksMax: 1

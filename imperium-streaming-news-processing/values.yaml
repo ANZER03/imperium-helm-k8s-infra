@@ -97,4 +97,17 @@ kafka-connect-sinks:
     clusterName: "imperium-streaming-news-processing-kafka-connect"
   countriesSink:
     enabled: true
-
+  languagesSink:
+    enabled: true
+  authoritiesSink:
+    enabled: true
+    name: "imperium-authorities-sink-v3"
+    tasksMax: 1
+  rubricsSink:
+    enabled: true
+  seditionsSink:
+    enabled: true
+  linksSink:
+    enabled: true
+    name: "imperium-links-sink-v3"
+    tasksMax: 1
