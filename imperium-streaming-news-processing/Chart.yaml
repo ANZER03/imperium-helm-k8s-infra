@@ -30,24 +30,4 @@ dependencies:
   - name: spark-operator
     version: 2.5.1
     repository: "https://kubeflow.github.io/spark-operator"
-  - name: kafka-cluster
-    version: 0.1.0
-    repository: "file://./charts/kafka-cluster"
-  - name: UI
-    version: 0.1.0
-    repository: "file://./charts/UI"
-  - name: schema-registry
-    version: 0.1.0
-    repository: "file://./charts/schema-registry"
-  - name: kafka-connect
-    version: 0.1.0
-    repository: "file://./charts/kafka-connect"
-  - name: opentelemetry-collector
-    version: 0.159.1
-    repository: "file://./charts/opentelemetry-collector"
-  - name: cloudnative-pg
-    version: 0.28.3
-    repository: "file://./charts/cloudnative-pg"
-  - name: pg-cluster
-    version: 0.1.0
-    repository: "file://./charts/pg-cluster"
+

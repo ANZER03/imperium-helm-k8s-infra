@@ -3,43 +3,618 @@
 fullnameOverride: "imperium-pg"
 
 cluster:
-  instances: 1
-  imageName: "ghcr.io/cloudnative-pg/postgresql:17.5"
+    instances: 1
+    imageName: "ghcr.io/cloudnative-pg/postgresql:17.5"
 
-  storage:
-    size: 2Gi
-    storageClass: ""  # empty = default storage class
+    storage:
+        size: 30Gi
+        storageClass: "" # empty = default storage class
 
-  resources:
-    requests:
-      memory: 256Mi
-      cpu: "250m"
-    limits:
-      memory: 512Mi
-      cpu: "500m"
+    resources:
+        requests:
+            memory: 4Gi
+            cpu: "4"
+        limits:
+            memory: 6Gi
+            cpu: "6"
 
-  bootstrap:
-    initdb:
-      database: imperium
-      owner: imperium
+    postgresql:
+        parameters:
+            wal_level: "logical"
+            max_wal_senders: "10"
+            max_replication_slots: "10"
 
-  monitoring:
-    enablePodMonitor: false
+    bootstrap:
+        initdb:
+            database: imperium
+            owner: imperium
+
+    monitoring:
+        enablePodMonitor: false
 
 auth:
-  username: imperium
-  password: imperium-secret
+    username: imperium
+    password: imperium-secret
 
 # SQL scripts to run after database initialization.
 # Each key is a filename, value is the SQL content.
 # Scripts are executed in alphabetical order on the application database.
-initScripts: {}
-  # 01-create-tables.sql: |
-  #   CREATE TABLE IF NOT EXISTS articles (
-  #     id SERIAL PRIMARY KEY,
-  #     title TEXT NOT NULL,
-  #     content TEXT,
-  #     created_at TIMESTAMP DEFAULT NOW()
-  #   );
-  # 02-seed-data.sql: |
-  #   INSERT INTO articles (title) VALUES ('Hello World');
+initScripts:
+    00-create-cdc-user.sql: |
+        -- Create replication user for CDC
+        CREATE ROLE debezium WITH REPLICATION LOGIN PASSWORD 'debezium-secret';
+        -- Grant membership of db owner to cdc user so it can manage replication publications
+        GRANT imperium TO debezium;
+        -- Grant permissions on schema/tables
+        GRANT USAGE ON SCHEMA public TO debezium;
+        GRANT ALL PRIVILEGES ON SCHEMA public TO debezium;
+        GRANT SELECT ON ALL TABLES IN SCHEMA public TO debezium;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO debezium;
+    00_reference_tables.sql: |
+        CREATE TABLE IF NOT EXISTS public.table_pays
+        (
+            id integer NOT NULL,
+            pays character varying(200) NOT NULL,
+            abr character varying(200) NOT NULL,
+            CONSTRAINT table_pays_pk PRIMARY KEY (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS public.table_langue
+        (
+            id integer NOT NULL,
+            langue character varying(200) NOT NULL,
+            abr character varying(200) NOT NULL,
+            CONSTRAINT table_langue_pk PRIMARY KEY (id)
+        );
+
+        CREATE SEQUENCE IF NOT EXISTS public.tableauthority_id_seq;
+
+        CREATE TABLE IF NOT EXISTS public.table_authority
+        (
+            id integer NOT NULL DEFAULT nextval('public.tableauthority_id_seq'::regclass),
+            link character varying(1000),
+            valide boolean,
+            domain character varying(100),
+            news boolean NOT NULL DEFAULT false,
+            pub boolean NOT NULL DEFAULT false,
+            authority character varying(100) NOT NULL,
+            actif boolean NOT NULL DEFAULT true,
+            pool_rdp_id_old integer NOT NULL DEFAULT 0,
+            pool_adconcept_id integer NOT NULL DEFAULT 0,
+            remote_id integer NOT NULL DEFAULT 0,
+            sedition_id integer NOT NULL DEFAULT 0,
+            rss boolean NOT NULL DEFAULT false,
+            ao boolean NOT NULL DEFAULT false,
+            doc boolean NOT NULL DEFAULT false,
+            website_id integer NOT NULL DEFAULT 0,
+            priority_level integer NOT NULL DEFAULT 0,
+            added_by integer NOT NULL DEFAULT 0,
+            added_by_app_id integer NOT NULL DEFAULT 0,
+            added_in timestamp without time zone NOT NULL DEFAULT now(),
+            title text NOT NULL DEFAULT ''::text,
+            pays_id integer NOT NULL DEFAULT 0,
+            sedition_webtv_id integer,
+            crawl_proxy boolean,
+            use_http_parameters boolean,
+            micro_service_id integer,
+            CONSTRAINT tablesites_pk PRIMARY KEY (id)
+        );
+
+        ALTER SEQUENCE public.tableauthority_id_seq OWNED BY public.table_authority.id;
+
+        CREATE TABLE IF NOT EXISTS public.table_sedition
+        (
+            id integer NOT NULL,
+            support_id integer NOT NULL,
+            definition_se character varying(200) NOT NULL DEFAULT ''::character varying,
+            langue_id integer NOT NULL,
+            media_id integer NOT NULL,
+            pays_id integer NOT NULL,
+            sedition character varying(200) DEFAULT ''::character varying,
+            periodicite_id integer NOT NULL DEFAULT 0,
+            media_type_id integer NOT NULL DEFAULT 0,
+            up_kiosque_bench boolean,
+            ispropress boolean NOT NULL DEFAULT false,
+            CONSTRAINT table_sedition_pk PRIMARY KEY (id)
+        );
+    01_table_rubrique.sql: |
+        CREATE TABLE IF NOT EXISTS public.table_rubrique
+        (
+            id integer NOT NULL,
+            sedition_id integer NOT NULL,
+            rubrique character varying(200) NOT NULL,
+            CONSTRAINT table_rubrique_pk PRIMARY KEY (id)
+        );
+    02_table_links.sql: |
+        CREATE SEQUENCE IF NOT EXISTS public.tablelinks_id_seq;
+
+        CREATE TABLE IF NOT EXISTS public.table_links
+        (
+            id integer NOT NULL DEFAULT nextval('public.tablelinks_id_seq'::regclass),
+            link text NOT NULL,
+            lastchecked timestamp without time zone NOT NULL DEFAULT now(),
+            added_in timestamp without time zone NOT NULL DEFAULT now(),
+            news boolean NOT NULL DEFAULT false,
+            pub boolean NOT NULL DEFAULT false,
+            rss boolean NOT NULL DEFAULT false,
+            authority_id integer NOT NULL,
+            actif boolean NOT NULL DEFAULT true,
+            title text NOT NULL,
+            dateformat text,
+            added_by integer NOT NULL DEFAULT 0,
+            remote_id integer NOT NULL DEFAULT 0,
+            langue_id integer NOT NULL DEFAULT 0,
+            theme_id integer NOT NULL DEFAULT 0,
+            ao boolean NOT NULL DEFAULT false,
+            doc boolean NOT NULL DEFAULT false,
+            rubrique_id integer NOT NULL DEFAULT 0,
+            rubric_path text NOT NULL DEFAULT ''::text,
+            rubric_paterne character varying(200) NOT NULL DEFAULT ''::character varying,
+            rss_api boolean NOT NULL DEFAULT false,
+            pays_id integer NOT NULL DEFAULT 0,
+            added_by_app_id integer NOT NULL DEFAULT 0,
+            micro_service_id integer,
+            standby_until timestamp without time zone,
+            CONSTRAINT tablelinks_pk PRIMARY KEY (id)
+        );
+
+        ALTER SEQUENCE public.tablelinks_id_seq OWNED BY public.table_links.id;
+    03_table_news.sql: |
+        CREATE TABLE IF NOT EXISTS public.table_news
+        (
+            id serial NOT NULL,
+            added_in timestamp without time zone NOT NULL DEFAULT now(),
+            added_by integer NOT NULL DEFAULT 0,
+            updated_in timestamp without time zone NOT NULL DEFAULT now(),
+            updated_by integer NOT NULL DEFAULT 0,
+            updated boolean NOT NULL DEFAULT false,
+            link_id integer NOT NULL DEFAULT 0,
+            more_url text NOT NULL DEFAULT ''::text,
+            more_title text NOT NULL DEFAULT ''::text,
+            more_inner_text text NOT NULL DEFAULT ''::text,
+            more_reporter text NOT NULL DEFAULT ''::text,
+            more_date_text text NOT NULL DEFAULT ''::text,
+            more_image_url text NOT NULL DEFAULT ''::text,
+            more_image_down boolean NOT NULL DEFAULT false,
+            more_source_html_down boolean NOT NULL DEFAULT false,
+            more_hash text NOT NULL,
+            more_image_extension_id integer NOT NULL DEFAULT 0,
+            more_image_size integer NOT NULL DEFAULT 0,
+            article_id integer NOT NULL DEFAULT 0,
+            article_applic_contenu_id integer NOT NULL DEFAULT 0,
+            langue_id integer NOT NULL DEFAULT 0,
+            langue_id_updated boolean NOT NULL DEFAULT false,
+            more_title_updated boolean NOT NULL DEFAULT false,
+            more_inner_text_updated boolean NOT NULL DEFAULT false,
+            valide boolean NOT NULL DEFAULT false,
+            checked boolean NOT NULL DEFAULT false,
+            to_delete boolean NOT NULL DEFAULT false,
+            more_meta_keywords text NOT NULL DEFAULT ''::text,
+            more_meta_description text NOT NULL DEFAULT ''::text,
+            more_trad_fr text NOT NULL DEFAULT ''::text,
+            ss_jpg boolean NOT NULL DEFAULT false,
+            ss_pdf boolean NOT NULL DEFAULT false,
+            ss_jpg_size integer NOT NULL DEFAULT 0,
+            ss_pdf_size integer NOT NULL DEFAULT 0,
+            indexed boolean NOT NULL DEFAULT false,
+            indexed_in timestamp without time zone NOT NULL DEFAULT now(),
+            rubrique_id integer NOT NULL DEFAULT 0,
+            rubric_checked boolean NOT NULL DEFAULT false,
+            more_date_checked boolean,
+            more_date_error_id integer,
+            more_date_regex_text text,
+            more_source_html character varying(256),
+            readability boolean DEFAULT false,
+            ss_rct boolean,
+            ss_rct_size integer,
+            authority_id integer DEFAULT 0,
+            more_video_url text,
+            indexed_s boolean,
+            queried boolean,
+            isvideo boolean NOT NULL DEFAULT false,
+            pubdate timestamp without time zone,
+            crawl_date timestamp without time zone,
+            micro_service_id integer,
+            article_payant boolean,
+            CONSTRAINT table_news_pk PRIMARY KEY (id)
+        );
+    04_debezium_signal.sql: |
+        CREATE TABLE IF NOT EXISTS public.debezium_signal
+        (
+            id VARCHAR(50) PRIMARY KEY,
+            type VARCHAR(50) NOT NULL,
+            data VARCHAR(2048) NULL
+        );
+    05_publications.sql: |
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'imperium_reference_publication') THEN
+                CREATE PUBLICATION imperium_reference_publication FOR TABLE public.table_pays, public.table_langue, public.table_rubrique, public.table_sedition;
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'imperium_metadata_publication') THEN
+                CREATE PUBLICATION imperium_metadata_publication FOR TABLE public.table_authority, public.table_links, public.debezium_signal;
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'imperium_news_publication') THEN
+                CREATE PUBLICATION imperium_news_publication FOR TABLE public.table_news, public.debezium_signal;
+            END IF;
+        END
+        $$;
+    05_temp_sink_tables.sql: |
+        CREATE TABLE IF NOT EXISTS public.sink_ref_pays
+        (
+            id integer PRIMARY KEY,
+            pays character varying(200),
+            abr character varying(200)
+        );
+
+        CREATE TABLE IF NOT EXISTS public.sink_ref_langue
+        (
+            id integer PRIMARY KEY,
+            langue character varying(200),
+            abr character varying(200)
+        );
+
+        CREATE TABLE IF NOT EXISTS public.sink_ref_rubrique
+        (
+            id integer PRIMARY KEY,
+            sedition_id integer,
+            rubrique character varying(200)
+        );
+
+        CREATE TABLE IF NOT EXISTS public.sink_ref_sedition
+        (
+            id integer PRIMARY KEY,
+            support_id integer,
+            langue_id integer,
+            media_id integer,
+            pays_id integer,
+            sedition character varying(200)
+        );
+
+        CREATE TABLE IF NOT EXISTS public.sink_meta_authority
+        (
+            id integer PRIMARY KEY,
+            authority character varying(100),
+            domain character varying(100),
+            link character varying(1000),
+            news boolean,
+            pub boolean,
+            rss boolean,
+            actif boolean,
+            pays_id integer,
+            added_in timestamp without time zone
+        );
+
+        CREATE TABLE IF NOT EXISTS public.sink_meta_links
+        (
+            id integer PRIMARY KEY,
+            link text,
+            authority_id integer,
+            title text,
+            langue_id integer,
+            theme_id integer,
+            rubrique_id integer,
+            pays_id integer,
+            news boolean,
+            rss boolean,
+            actif boolean,
+            lastchecked timestamp without time zone
+        );
+
+        CREATE TABLE IF NOT EXISTS public.sink_news
+        (
+            id integer PRIMARY KEY,
+            added_in timestamp without time zone,
+            link_id integer,
+            authority_id integer,
+            rubrique_id integer,
+            langue_id integer,
+            more_title text,
+            more_url text,
+            pubdate timestamp without time zone,
+            crawl_date timestamp without time zone,
+            valide boolean,
+            indexed boolean
+        );
+    06_phase3_cleaned_articles.sql: |
+        CREATE TABLE IF NOT EXISTS imperium_articles
+        (
+            article_id text PRIMARY KEY,
+            source_news_id integer NOT NULL,
+            payload jsonb NOT NULL,
+            schema_version integer NOT NULL,
+            classification_status text NOT NULL,
+            dimension_status text NOT NULL,
+            published_at timestamp with time zone,
+            crawled_at timestamp with time zone,
+            processed_at timestamp with time zone NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE INDEX IF NOT EXISTS imperium_articles_source_news_id_idx
+            ON imperium_articles (source_news_id);
+    07_phase3_curated_dimensions.sql: |
+        CREATE TABLE IF NOT EXISTS imperium_dim_links
+        (
+            link_id integer PRIMARY KEY,
+            url text,
+            source_domain text,
+            source_name text,
+            country_id integer,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_authorities
+        (
+            authority_id integer PRIMARY KEY,
+            source_name text,
+            source_domain text,
+            sedition_id integer,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_seditions
+        (
+            sedition_id integer PRIMARY KEY,
+            country_id integer,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_countries
+        (
+            country_id integer PRIMARY KEY,
+            country_name text,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_rubrics
+        (
+            rubric_id integer PRIMARY KEY,
+            rubric_title text,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_languages
+        (
+            language_id integer PRIMARY KEY,
+            language_code text,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+    08_phase3_projection_state.sql: |
+        CREATE TABLE IF NOT EXISTS imperium_projection_state
+        (
+            article_id text PRIMARY KEY,
+            country_id integer,
+            root_topic_id integer,
+            published_at timestamp with time zone,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE INDEX IF NOT EXISTS imperium_projection_state_country_idx
+            ON imperium_projection_state (country_id);
+
+        CREATE INDEX IF NOT EXISTS imperium_projection_state_root_topic_idx
+            ON imperium_projection_state (root_topic_id);
+    09_trending_items.sql: |
+        -- Trending items: historical snapshots of keyword/entity trend scores.
+        -- Written by the imperium-trending-driver Spark app.
+
+        CREATE TABLE IF NOT EXISTS trend_items (
+            id BIGSERIAL PRIMARY KEY,
+
+            window_start TIMESTAMPTZ NOT NULL,
+            window_end   TIMESTAMPTZ NOT NULL,
+
+            scope_type   TEXT NOT NULL,   -- 'global', 'country', 'topic'
+            scope_value  TEXT NOT NULL,   -- 'global', country_name, root_topic_label
+
+            term         TEXT NOT NULL,
+            term_type    TEXT NOT NULL,   -- 'title_word', 'title_bigram', 'excerpt_word'
+
+            article_ids  TEXT[] NOT NULL DEFAULT '{}',
+
+            current_count  INT NOT NULL,
+            previous_count INT NOT NULL DEFAULT 0,
+            velocity       DOUBLE PRECISION NOT NULL DEFAULT 1,
+            score          DOUBLE PRECISION NOT NULL,
+
+            created_at     TIMESTAMPTZ DEFAULT now(),
+
+            UNIQUE (
+                window_start,
+                window_end,
+                scope_type,
+                scope_value,
+                term,
+                term_type
+            )
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_trend_scope_window
+            ON trend_items (scope_type, scope_value, window_end DESC, score DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_trend_term
+            ON trend_items (term, window_end DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_trend_window
+            ON trend_items (window_end DESC);
+    phase3-01_cleaned_articles.sql: |
+        CREATE TABLE IF NOT EXISTS imperium_articles
+        (
+            article_id text PRIMARY KEY,
+            source_news_id integer NOT NULL,
+            payload jsonb NOT NULL,
+            schema_version integer NOT NULL,
+            classification_status text NOT NULL,
+            dimension_status text NOT NULL,
+            published_at timestamp with time zone,
+            crawled_at timestamp with time zone,
+            processed_at timestamp with time zone NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE INDEX IF NOT EXISTS imperium_articles_source_news_id_idx
+            ON imperium_articles (source_news_id);
+
+        -- First-emission upsert contract for issue #14:
+        --
+        -- INSERT INTO imperium_articles (
+        --     article_id, source_news_id, payload, schema_version,
+        --     classification_status, dimension_status,
+        --     published_at, crawled_at, processed_at
+        -- )
+        -- VALUES (
+        --     :article_id, :source_news_id, :payload::jsonb, :schema_version,
+        --     :classification_status, :dimension_status,
+        --     :published_at, :crawled_at, :processed_at
+        -- )
+        -- ON CONFLICT (article_id) DO UPDATE SET
+        --     source_news_id = EXCLUDED.source_news_id,
+        --     payload = EXCLUDED.payload,
+        --     schema_version = EXCLUDED.schema_version,
+        --     classification_status = EXCLUDED.classification_status,
+        --     dimension_status = EXCLUDED.dimension_status,
+        --     published_at = EXCLUDED.published_at,
+        --     crawled_at = EXCLUDED.crawled_at,
+        --     processed_at = EXCLUDED.processed_at,
+        --     updated_at = now();
+    phase3-02_topic_taxonomy.sql: |
+        CREATE TABLE IF NOT EXISTS imperium_topic_taxonomy
+        (
+            topic_id          text PRIMARY KEY,
+            parent_topic_id   text REFERENCES imperium_topic_taxonomy (topic_id),
+            topic_key         text NOT NULL,
+            display_name      text NOT NULL,
+            description       text NOT NULL,
+            taxonomy_version  text NOT NULL,
+            is_active         boolean NOT NULL DEFAULT true,
+            review_status     text NOT NULL DEFAULT 'draft',
+            -- Rich taxonomy fields from medtop JSON
+            embedding_seeds   jsonb NOT NULL DEFAULT '[]'::jsonb,
+            signals_strong    jsonb NOT NULL DEFAULT '[]'::jsonb,
+            signals_medium    jsonb NOT NULL DEFAULT '[]'::jsonb,
+            signals_weak      jsonb NOT NULL DEFAULT '[]'::jsonb,
+            dimensions_event  jsonb NOT NULL DEFAULT '[]'::jsonb,
+            dimensions_impact jsonb NOT NULL DEFAULT '[]'::jsonb,
+            dimensions_actors jsonb NOT NULL DEFAULT '[]'::jsonb,
+            reviewed_by       text,
+            reviewed_at       timestamp with time zone,
+            created_at        timestamp with time zone NOT NULL DEFAULT now(),
+            updated_at        timestamp with time zone NOT NULL DEFAULT now(),
+            CONSTRAINT imperium_topic_taxonomy_topic_key_version_key
+                UNIQUE (topic_key, taxonomy_version),
+            CONSTRAINT imperium_topic_taxonomy_review_status_check
+                CHECK (review_status IN ('draft', 'approved', 'rejected'))
+        );
+
+        CREATE INDEX IF NOT EXISTS imperium_topic_taxonomy_parent_idx
+            ON imperium_topic_taxonomy (parent_topic_id);
+
+        CREATE INDEX IF NOT EXISTS imperium_topic_taxonomy_active_version_idx
+            ON imperium_topic_taxonomy (taxonomy_version, is_active);
+
+        CREATE TABLE IF NOT EXISTS imperium_topic_embeddings
+        (
+            topic_id             text NOT NULL REFERENCES imperium_topic_taxonomy (topic_id),
+            taxonomy_version     text NOT NULL,
+            embedding_model      text NOT NULL,
+            embedding_dimension  integer NOT NULL,
+            embedding_input_text text NOT NULL,
+            embedding_input_hash text NOT NULL,
+            embedding_vector     double precision[] NOT NULL,
+            is_active            boolean NOT NULL DEFAULT true,
+            created_at           timestamp with time zone NOT NULL DEFAULT now(),
+            updated_at           timestamp with time zone NOT NULL DEFAULT now(),
+            PRIMARY KEY (topic_id, taxonomy_version, embedding_model)
+        );
+
+        CREATE INDEX IF NOT EXISTS imperium_topic_embeddings_active_idx
+            ON imperium_topic_embeddings (taxonomy_version, embedding_model, is_active);
+    phase3-03_curated_dimensions.sql: |
+        CREATE TABLE IF NOT EXISTS imperium_dim_links
+        (
+            link_id integer PRIMARY KEY,
+            url text,
+            source_domain text,
+            source_name text,
+            country_id integer,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_authorities
+        (
+            authority_id integer PRIMARY KEY,
+            source_name text,
+            source_domain text,
+            sedition_id integer,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_seditions
+        (
+            sedition_id integer PRIMARY KEY,
+            country_id integer,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_countries
+        (
+            country_id integer PRIMARY KEY,
+            country_name text,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_rubrics
+        (
+            rubric_id integer PRIMARY KEY,
+            rubric_title text,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS imperium_dim_languages
+        (
+            language_id integer PRIMARY KEY,
+            language_code text,
+            is_active boolean NOT NULL DEFAULT true,
+            payload jsonb NOT NULL,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+    phase3-04_projection_state.sql: |
+        CREATE TABLE IF NOT EXISTS imperium_projection_state
+        (
+            article_id text PRIMARY KEY,
+            country_id integer,
+            root_topic_id integer,
+            published_at timestamp with time zone,
+            updated_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+
+        CREATE INDEX IF NOT EXISTS imperium_projection_state_country_idx
+            ON imperium_projection_state (country_id);
+
+        CREATE INDEX IF NOT EXISTS imperium_projection_state_root_topic_idx
+            ON imperium_projection_state (root_topic_id);

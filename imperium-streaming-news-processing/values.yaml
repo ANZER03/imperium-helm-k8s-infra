@@ -39,48 +39,10 @@ kafka-connect:
     enabled: true
     collectorEndpoint: "http://imperium-streaming-news-processing-opentelemetry-collector:4317"
 
-
 opentelemetry-collector:
   enabled: true
   mode: deployment
   image:
     repository: otel/opentelemetry-collector-contrib
 
-cloudnative-pg: {}  # use operator defaults
-
-pg-cluster:
-  enabled: true
-  cluster:
-    instances: 1
-    storage:
-      size: 2Gi
-  auth:
-    username: imperium
-    password: imperium-secret
-  initScripts:
-    00-create-cdc-user.sql: |
-      -- Create replication user for CDC
-      CREATE ROLE debezium WITH REPLICATION LOGIN PASSWORD 'debezium-secret';
-      -- Grant membership of db owner to cdc user so it can manage replication publications
-      GRANT imperium TO debezium;
-      -- Grant permissions on schema/tables
-      GRANT USAGE ON SCHEMA public TO debezium;
-      GRANT ALL PRIVILEGES ON SCHEMA public TO debezium;
-      GRANT SELECT ON ALL TABLES IN SCHEMA public TO debezium;
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO debezium;
-    01-create-tables.sql: |
-      CREATE TABLE IF NOT EXISTS articles (
-        id SERIAL PRIMARY KEY,
-        title TEXT NOT NULL,
-        url TEXT,
-        source VARCHAR(255),
-        published_at TIMESTAMP,
-        content TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-
-
-
-
-
-
+cloudnative-pg: {} # use operator defaults

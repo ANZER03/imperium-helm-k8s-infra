@@ -19,6 +19,11 @@ spec:
     {{- toYaml .Values.cluster.resources | nindent 4 }}
   {{- end }}
 
+  {{- if .Values.cluster.postgresql }}
+  postgresql:
+    {{- toYaml .Values.cluster.postgresql | nindent 4 }}
+  {{- end }}
+
   bootstrap:
     initdb:
       database: {{ .Values.cluster.bootstrap.initdb.database | quote }}
