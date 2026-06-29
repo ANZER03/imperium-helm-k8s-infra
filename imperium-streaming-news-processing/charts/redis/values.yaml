@@ -14,7 +14,7 @@ redis:
   # Password authentication
   auth:
     enabled: true
-    password: "changeme-in-production"
+    password: "redis-123@@"
 
 resources:
   requests:
