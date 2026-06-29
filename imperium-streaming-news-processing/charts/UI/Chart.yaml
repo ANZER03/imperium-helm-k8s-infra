@@ -11,3 +11,6 @@ dependencies:
   - name: pgadmin
     version: 0.1.0
     repository: "file://./charts/pgadmin"
+  - name: redisinsight
+    version: 0.1.0
+    repository: "file://./charts/redisinsight"

@@ -1,0 +1,33 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/ggml-org/llama.cpp
+  tag: server
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+model:
+  hostPath: /models
+  filename: embeddinggemma-300M-Q8_0.gguf
+
+config:
+  threads: 32
+  threadsBatch: 32
+  batchSize: 8192
+  ubatchSize: 2048
+
+resources:
+  limits:
+    cpu: "8"
+    memory: 4Gi
+  requests:
+    cpu: "8"
+    memory: 2Gi
+
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

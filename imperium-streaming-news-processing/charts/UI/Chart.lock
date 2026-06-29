@@ -5,5 +5,8 @@ dependencies:
 - name: pgadmin
   repository: file://./charts/pgadmin
   version: 0.1.0
-digest: sha256:72ec36291d8011a4707889cac65ac481b742e6b2bc7e20c31a88ceb5962b847d
-generated: "2026-06-28T14:44:03.599927778Z"
+- name: redisinsight
+  repository: file://./charts/redisinsight
+  version: 0.1.0
+digest: sha256:3d2fef5e3f29a7f8b02e2f033fb33cdec83a554637e4d659b14eb2f440a69833
+generated: "2026-06-29T00:38:19.168507373Z"

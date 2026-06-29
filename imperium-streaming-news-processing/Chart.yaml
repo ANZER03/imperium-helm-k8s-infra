@@ -30,4 +30,9 @@ dependencies:
   - name: spark-operator
     version: 2.5.1
     repository: "https://kubeflow.github.io/spark-operator"
+  - name: llama-cpp
+    version: 0.1.0
+    repository: "file://charts/llama-cpp"
+    condition: llama-cpp.enabled
+
 

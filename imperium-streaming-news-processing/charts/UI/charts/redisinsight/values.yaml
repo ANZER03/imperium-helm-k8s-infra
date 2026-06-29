@@ -1,0 +1,16 @@
+image:
+  repository: redis/redisinsight
+  pullPolicy: IfNotPresent
+  tag: "2.54.0"
+
+service:
+  type: ClusterIP
+  port: 5540
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

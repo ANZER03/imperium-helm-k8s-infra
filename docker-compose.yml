@@ -13,6 +13,7 @@ services:
       - k3s-server-data:/var/lib/rancher/k3s
       - ./output:/output
       - ./registries.yaml:/etc/rancher/k3s/registries.yaml
+      - ./models:/models:ro
 
     ports:
       - "6443:6443"
@@ -35,6 +36,7 @@ services:
       - k3s-server
     volumes:
       - ./registries.yaml:/etc/rancher/k3s/registries.yaml
+      - ./models:/models:ro
 
     networks:
       - k3s-net
@@ -53,6 +55,7 @@ services:
       - k3s-server
     volumes:
       - ./registries.yaml:/etc/rancher/k3s/registries.yaml
+      - ./models:/models:ro
 
     networks:
       - k3s-net

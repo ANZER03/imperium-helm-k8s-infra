@@ -18,6 +18,8 @@ UI:
       schemaRegistry: "http://imperium-streaming-news-processing-schema-registry:8081"
   pgadmin:
     enabled: true
+  redisinsight:
+    enabled: true
 
 schema-registry:
   enabled: true
@@ -46,3 +48,10 @@ opentelemetry-collector:
     repository: otel/opentelemetry-collector-contrib
 
 cloudnative-pg: {} # use operator defaults
+
+redis:
+  enabled: true
+
+llama-cpp:
+  enabled: true
+

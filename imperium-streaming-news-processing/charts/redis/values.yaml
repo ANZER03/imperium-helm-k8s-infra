@@ -1,0 +1,29 @@
+# Redis standalone subchart values
+# Production configuration with RDB + AOF persistence
+
+image:
+  repository: redis
+  tag: "7.4-alpine"
+  pullPolicy: IfNotPresent
+
+redis:
+  # Memory limit for Redis (used in redis.conf maxmemory)
+  maxmemory: "3gb"
+  # Eviction policy when maxmemory is reached
+  maxmemoryPolicy: "noeviction"
+  # Password authentication
+  auth:
+    enabled: true
+    password: "changeme-in-production"
+
+resources:
+  requests:
+    memory: "4Gi"
+    cpu: "2"
+  limits:
+    memory: "4Gi"
+    cpu: "3"
+
+persistence:
+  size: 10Gi
+  # storageClass: ""  # uses cluster default if not set

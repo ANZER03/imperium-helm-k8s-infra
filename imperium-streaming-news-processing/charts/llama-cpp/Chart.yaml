@@ -1,0 +1,6 @@
+apiVersion: v2
+name: llama-cpp
+description: A Helm subchart for deploying llama.cpp server with model inference
+type: application
+version: 0.1.0
+appVersion: "server"

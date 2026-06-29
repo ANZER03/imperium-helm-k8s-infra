@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "redis.fullname" . }}-config
+  labels:
+    {{- include "redis.labels" . | nindent 4 }}
+data:
+  redis.conf: |
+    # ============================================================
+    # Redis Production Configuration
+    # Standalone mode with RDB + AOF persistence
+    # ============================================================
+
+    # --- Network ---
+    bind 0.0.0.0
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    protected-mode no
+
+    # --- General ---
+    daemonize no
+    loglevel notice
+    databases 16
+
+    # --- Memory ---
+    maxmemory {{ .Values.redis.maxmemory }}
+    maxmemory-policy {{ .Values.redis.maxmemoryPolicy }}
+
+    # --- RDB Persistence ---
+    # Save after 3600s if at least 1 key changed
+    # Save after 300s if at least 100 keys changed
+    # Save after 60s if at least 10000 keys changed
+    save 3600 1
+    save 300 100
+    save 60 10000
+    stop-writes-on-bgsave-error yes
+    rdbcompression yes
+    rdbchecksum yes
+    dbfilename dump.rdb
+    dir /data
+
+    # --- AOF Persistence ---
+    appendonly yes
+    appendfilename "appendonly.aof"
+    appendfsync everysec
+    no-appendfsync-on-rewrite no
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 64mb
+    aof-use-rdb-preamble yes
+
+    # --- Slow Log ---
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+
+    # --- Latency Monitor ---
+    latency-monitor-threshold 100
+
+    # --- Active Defrag (production tuning) ---
+    activedefrag yes
+    active-defrag-threshold-lower 10
+    active-defrag-threshold-upper 100
+    active-defrag-cycle-min 1
+    active-defrag-cycle-max 25
+
+    # --- Client Output Buffer Limits ---
+    client-output-buffer-limit normal 0 0 0
+    client-output-buffer-limit replica 256mb 64mb 60
+    client-output-buffer-limit pubsub 32mb 8mb 60
+
+    # --- Lazy Freeing (async deletion for better latency) ---
+    lazyfree-lazy-eviction yes
+    lazyfree-lazy-expire yes
+    lazyfree-lazy-server-del yes
+    replica-lazy-flush yes
+
+    # --- Security ---
+    {{- if .Values.redis.password }}
+    requirepass {{ .Values.redis.password }}
+    {{- end }}

@@ -6,3 +6,6 @@ kafka-ui:
 
 pgadmin:
   enabled: true
+
+redisinsight:
+  enabled: true

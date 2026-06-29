@@ -5,5 +5,8 @@ dependencies:
 - name: spark-operator
   repository: https://kubeflow.github.io/spark-operator
   version: 2.5.1
-digest: sha256:6126f9260c269be6ef926eb5a72a56584ff38a442d01290666593eb915db5e64
-generated: "2026-06-29T00:04:14.585278703Z"
+- name: llama-cpp
+  repository: file://charts/llama-cpp
+  version: 0.1.0
+digest: sha256:16d8b3b7f172928298815b4555efe66f109ea715e00854cba6c003f8143e6f42
+generated: "2026-06-29T00:55:49.189325506Z"
