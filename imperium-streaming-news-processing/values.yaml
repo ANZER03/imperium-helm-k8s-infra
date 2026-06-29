@@ -32,7 +32,7 @@ kafka-connect:
   replicaCount: 1
   image:
     repository: "registry.registry.svc.cluster.local:5000/debezium-avro"
-    tag: "1.1.3"
+    tag: "1.1.4"
 
   kafka:
     bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"

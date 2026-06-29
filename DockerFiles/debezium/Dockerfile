@@ -1,5 +1,5 @@
 FROM confluentinc/cp-kafka-connect:7.5.0 AS confluent-source
-FROM debezium/connect:2.7.3.Final AS debezium-source
+FROM quay.io/debezium/connect:3.5 AS debezium-source
 
 FROM quay.io/strimzi/kafka:1.0.1-kafka-4.2.0
 
