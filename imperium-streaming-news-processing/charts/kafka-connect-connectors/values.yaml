@@ -65,7 +65,7 @@ news:
   slotName: debezium_news_slot
   publicationName: imperium_news_publication
   table: "public.table_news"
-  snapshotMode: never
+  snapshotMode: no_data
   signalTopic: imperium.news.signals
   schemaHistoryTopic: imperium.news.schema-history
   tasksMax: 1

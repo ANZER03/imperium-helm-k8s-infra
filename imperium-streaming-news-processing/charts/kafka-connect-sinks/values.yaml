@@ -16,6 +16,6 @@ connect:
 
 # Country Sink configuration
 countriesSink:
-  enabled: false
-  name: imperium-countries-sink
+  enabled: true
+  name: imperium-countries-sink-v2
   tasksMax: 1

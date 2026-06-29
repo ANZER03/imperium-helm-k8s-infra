@@ -24,7 +24,7 @@ spec:
     publication.autocreate.mode: "disabled"
     table.include.list: {{ .Values.news.table | quote }}
     # ── Snapshot: never — stream-only, backfill via signal ─────────────────
-    snapshot.mode: never
+    snapshot.mode: {{ .Values.news.snapshotMode }}
     # ── Signal channels ────────────────────────────────────────────────────
     signal.enabled.channels: "source,kafka"
     signal.data.collection: "public.debezium_signal"
@@ -39,13 +39,5 @@ spec:
     max.queue.size: "65536"
     max.batch.size: "8192"
     poll.interval.ms: "500"
-    # ── Producer overrides (large article payloads, lz4 compression) ───────
-    producer.override.buffer.memory: "536870912"
-    producer.override.batch.size: "524288"
-    producer.override.linger.ms: "100"
-    producer.override.max.request.size: "10485760"
-    producer.override.max.block.ms: "300000"
-    producer.override.request.timeout.ms: "120000"
-    producer.override.delivery.timeout.ms: "300000"
-    producer.override.compression.type: lz4
+    # ── Producer overrides removed due to policy ───────
 {{- end }}
