@@ -59,15 +59,6 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-            - name: models-volume
-              mountPath: /models
-              readOnly: true
-      volumes:
-        - name: models-volume
-          hostPath:
-            path: {{ .Values.model.hostPath }}
-            type: Directory
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

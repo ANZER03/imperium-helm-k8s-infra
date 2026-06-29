@@ -19,6 +19,7 @@ services:
       - "6443:6443"
       - "8084:80"
       - "8443:443"
+      - "30500:30500"
     networks:
       - k3s-net
       - imperium-net

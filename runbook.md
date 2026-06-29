@@ -147,3 +147,28 @@ Roll back to a previous deployment revision if an upgrade fails:
 ```bash
 helm rollback <release-name> <revision-number> -n <namespace>
 ```
+
+---
+
+## 6. Managing Custom Images and Registry
+
+When building and pushing custom images (like `llama-cpp` containing the embedded model), you must interact with the local registry.
+
+### Port-forward the Registry
+Since the registry service is inside the K3s cluster, port-forward it to expose it on the host:
+```bash
+kubectl port-forward svc/registry -n registry 30500:5000 &
+```
+
+### Build the Custom Image
+Build the Docker image containing the downloaded model:
+```bash
+docker build -t localhost:30500/llama-cpp-gemma:latest -f DockerFiles/llama-cpp/Dockerfile .
+```
+
+### Push to local registry
+Push the image to the local registry:
+```bash
+docker push localhost:30500/llama-cpp-gemma:latest
+```
+
