@@ -1,0 +1,51 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: {{ include "canonical-driver.fullname" . }}
+  labels:
+    {{- include "canonical-driver.labels" . | nindent 4 }}
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+  imagePullPolicy: Always
+  mainApplicationFile: "local:///opt/imperium/news-pipeline/jobs/enrichment/driver.py"
+  sparkVersion: "3.5.3"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+  driver:
+    cores: {{ .Values.spark.driver.cores }}
+    coreLimit: "{{ .Values.spark.driver.coreLimit }}"
+    memory: "{{ .Values.spark.driver.memory }}"
+    labels:
+      version: {{ .Values.image.tag }}
+    serviceAccount: {{ .Values.spark.serviceAccount | default (printf "%s-spark-operator-spark" .Release.Name) }}
+    env:
+      - name: KAFKA_BOOTSTRAP_SERVERS
+        value: "{{ .Values.kafka.bootstrapServers }}"
+      - name: SCHEMA_REGISTRY_URL
+        value: "{{ .Values.schemaRegistry.url }}"
+      - name: POSTGRES_DSN
+        value: "{{ .Values.postgres.dsn }}"
+      - name: CHECKPOINT_ROOT
+        value: "{{ .Values.checkpoints.root }}"
+  executor:
+    cores: {{ .Values.spark.executor.cores }}
+    instances: {{ .Values.spark.executor.instances }}
+    memory: "{{ .Values.spark.executor.memory }}"
+    labels:
+      version: {{ .Values.image.tag }}
+    env:
+      - name: KAFKA_BOOTSTRAP_SERVERS
+        value: "{{ .Values.kafka.bootstrapServers }}"
+      - name: SCHEMA_REGISTRY_URL
+        value: "{{ .Values.schemaRegistry.url }}"
+      - name: POSTGRES_DSN
+        value: "{{ .Values.postgres.dsn }}"
+      - name: CHECKPOINT_ROOT
+        value: "{{ .Values.checkpoints.root }}"

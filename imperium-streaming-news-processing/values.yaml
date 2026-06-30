@@ -111,3 +111,9 @@ kafka-connect-sinks:
     enabled: true
     name: "imperium-links-sink-v3"
     tasksMax: 1
+
+spark-operator:
+  spark:
+    jobNamespaces:
+      - imperium-news-ns
+
