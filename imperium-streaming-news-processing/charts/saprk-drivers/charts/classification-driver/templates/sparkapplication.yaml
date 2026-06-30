@@ -1,0 +1,115 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: {{ include "classification-driver.fullname" . }}
+  labels:
+    {{- include "classification-driver.labels" . | nindent 4 }}
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+  imagePullPolicy: Always
+  mainApplicationFile: "local:///opt/imperium/news-pipeline/jobs/phase3_classification_runtime.py"
+  sparkVersion: "3.5.3"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+  driver:
+    cores: {{ .Values.spark.driver.cores }}
+    coreLimit: "{{ .Values.spark.driver.coreLimit }}"
+    memory: "{{ .Values.spark.driver.memory }}"
+    labels:
+      version: {{ .Values.image.tag }}
+    serviceAccount: {{ .Values.spark.serviceAccount | default (printf "%s-spark-operator-spark" .Release.Name) }}
+    env:
+      - name: KAFKA_BOOTSTRAP_SERVERS
+        value: "{{ .Values.kafka.bootstrapServers }}"
+      - name: SCHEMA_REGISTRY_URL
+        value: "{{ .Values.schemaRegistry.url }}"
+      - name: POSTGRES_DSN
+        value: "{{ .Values.postgres.dsn }}"
+      - name: NVIDIA_EMBEDDING_BASE_URL
+        value: "{{ .Values.nvidia.embeddingBaseUrl }}"
+      - name: NVIDIA_EMBEDDING_MODEL
+        value: "{{ .Values.nvidia.embeddingModel }}"
+      - name: NVIDIA_API_KEY
+        value: "{{ .Values.nvidia.apiKey }}"
+      - name: CLASSIFICATION_NVIDIA_RPM_BUDGET
+        value: "{{ .Values.nvidia.rpmBudget }}"
+      - name: CHECKPOINT_ROOT
+        value: "{{ .Values.checkpoints.root }}"
+      - name: CLASSIFICATION_CHECKPOINT_NAME
+        value: "{{ .Values.checkpoints.name }}"
+      - name: CLASSIFICATION_STARTING_OFFSETS
+        value: "{{ .Values.classification.startingOffsets }}"
+      - name: CLASSIFICATION_KAFKA_GROUP_ID
+        value: "{{ .Values.classification.kafkaGroupId }}"
+      - name: CLASSIFICATION_MAX_OFFSETS_PER_TRIGGER
+        value: "{{ .Values.classification.maxOffsetsPerTrigger }}"
+      - name: CLASSIFICATION_TRIGGER_PROCESSING_TIME
+        value: "{{ .Values.classification.triggerProcessingTime }}"
+      - name: CLASSIFICATION_MAX_ARTICLES_PER_BATCH
+        value: "{{ .Values.classification.maxArticlesPerBatch }}"
+      - name: CLASSIFICATION_EMBEDDING_BATCH_SIZE
+        value: "{{ .Values.classification.embeddingBatchSize }}"
+      - name: ARTICLE_TABLE
+        value: "{{ .Values.classification.articleTable }}"
+      - name: TOPIC_TAXONOMY_TABLE
+        value: "{{ .Values.classification.topicTaxonomyTable }}"
+      - name: TOPIC_EMBEDDINGS_TABLE
+        value: "{{ .Values.classification.topicEmbeddingsTable }}"
+      - name: CLASSIFIED_DLQ_TOPIC
+        value: "{{ .Values.classification.classifiedDlqTopic }}"
+      - name: CLASSIFIED_TOPIC
+        value: "{{ .Values.classification.classifiedTopic }}"
+  executor:
+    cores: {{ .Values.spark.executor.cores }}
+    instances: {{ .Values.spark.executor.instances }}
+    memory: "{{ .Values.spark.executor.memory }}"
+    labels:
+      version: {{ .Values.image.tag }}
+    env:
+      - name: KAFKA_BOOTSTRAP_SERVERS
+        value: "{{ .Values.kafka.bootstrapServers }}"
+      - name: SCHEMA_REGISTRY_URL
+        value: "{{ .Values.schemaRegistry.url }}"
+      - name: POSTGRES_DSN
+        value: "{{ .Values.postgres.dsn }}"
+      - name: NVIDIA_EMBEDDING_BASE_URL
+        value: "{{ .Values.nvidia.embeddingBaseUrl }}"
+      - name: NVIDIA_EMBEDDING_MODEL
+        value: "{{ .Values.nvidia.embeddingModel }}"
+      - name: NVIDIA_API_KEY
+        value: "{{ .Values.nvidia.apiKey }}"
+      - name: CLASSIFICATION_NVIDIA_RPM_BUDGET
+        value: "{{ .Values.nvidia.rpmBudget }}"
+      - name: CHECKPOINT_ROOT
+        value: "{{ .Values.checkpoints.root }}"
+      - name: CLASSIFICATION_CHECKPOINT_NAME
+        value: "{{ .Values.checkpoints.name }}"
+      - name: CLASSIFICATION_STARTING_OFFSETS
+        value: "{{ .Values.classification.startingOffsets }}"
+      - name: CLASSIFICATION_KAFKA_GROUP_ID
+        value: "{{ .Values.classification.kafkaGroupId }}"
+      - name: CLASSIFICATION_MAX_OFFSETS_PER_TRIGGER
+        value: "{{ .Values.classification.maxOffsetsPerTrigger }}"
+      - name: CLASSIFICATION_TRIGGER_PROCESSING_TIME
+        value: "{{ .Values.classification.triggerProcessingTime }}"
+      - name: CLASSIFICATION_MAX_ARTICLES_PER_BATCH
+        value: "{{ .Values.classification.maxArticlesPerBatch }}"
+      - name: CLASSIFICATION_EMBEDDING_BATCH_SIZE
+        value: "{{ .Values.classification.embeddingBatchSize }}"
+      - name: ARTICLE_TABLE
+        value: "{{ .Values.classification.articleTable }}"
+      - name: TOPIC_TAXONOMY_TABLE
+        value: "{{ .Values.classification.topicTaxonomyTable }}"
+      - name: TOPIC_EMBEDDINGS_TABLE
+        value: "{{ .Values.classification.topicEmbeddingsTable }}"
+      - name: CLASSIFIED_DLQ_TOPIC
+        value: "{{ .Values.classification.classifiedDlqTopic }}"
+      - name: CLASSIFIED_TOPIC
+        value: "{{ .Values.classification.classifiedTopic }}"

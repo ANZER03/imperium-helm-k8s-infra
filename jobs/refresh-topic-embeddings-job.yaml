@@ -1,0 +1,561 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: refresh-topic-embeddings-script
+data:
+  refresh.py: |
+    import os
+    import sys
+    import json
+    import urllib.request
+    from hashlib import sha256
+    import psycopg2
+
+    # Setup parameters
+    TARGET_URI = os.environ.get(
+        "TARGET_URI",
+        "postgresql://imperium:imperium-secret@imperium-pg-rw:5432/imperium"
+    )
+    LLAMA_CPP_BASE_URL = os.environ.get(
+        "LLAMA_CPP_BASE_URL",
+        "http://imperium-streaming-news-processing-llama-cpp:8080"
+    )
+    EMBEDDING_MODEL = os.environ.get(
+        "EMBEDDING_MODEL",
+        "embeddinggemma-300M-Q8_0.gguf"
+    )
+    TAXONOMY_PATH = os.environ.get(
+        "TAXONOMY_PATH",
+        "/app/news_topic_taxonomy_medtop_en_us.json"
+    )
+
+    def get_embeddings(base_url, model, texts, batch_size=13):
+        url = f"{base_url.rstrip('/')}/v1/embeddings"
+        all_vectors = []
+
+        for i in range(0, len(texts), batch_size):
+            chunk = texts[i : i + batch_size]
+            payload = json.dumps({"model": model, "input": chunk}).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    body = json.loads(resp.read())
+                # Sorted by index to preserve order
+                items = sorted(body["data"], key=lambda x: x["index"])
+                all_vectors.extend(item["embedding"] for item in items)
+            except Exception as exc:
+                print(f"Error calling embedding service: {exc}", file=sys.stderr)
+                raise
+        return all_vectors
+
+    def _dedup(values, seen):
+        result = []
+        for v in values:
+            key = v.strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                result.append(v.strip())
+        return result
+
+    def _join_items(label, values, sep=", "):
+        clean_values = [v.strip() for v in values if v.strip()]
+        if not clean_values:
+            return ""
+        return f"{label}: {sep.join(clean_values)}"
+
+    _DROP_EMBEDDINGS = "DROP TABLE IF EXISTS imperium_topic_embeddings CASCADE;"
+    _DROP_TAXONOMY   = "DROP TABLE IF EXISTS imperium_topic_taxonomy CASCADE;"
+
+    _DDL_TAXONOMY = """
+    CREATE TABLE IF NOT EXISTS imperium_topic_taxonomy (
+        topic_id          text PRIMARY KEY,
+        parent_topic_id   text REFERENCES imperium_topic_taxonomy (topic_id),
+        topic_key         text NOT NULL,
+        display_name      text NOT NULL,
+        description       text NOT NULL,
+        taxonomy_version  text NOT NULL,
+        is_active         boolean NOT NULL DEFAULT true,
+        review_status     text NOT NULL DEFAULT 'draft',
+        embedding_seeds   jsonb NOT NULL DEFAULT '[]'::jsonb,
+        signals_strong    jsonb NOT NULL DEFAULT '[]'::jsonb,
+        signals_medium    jsonb NOT NULL DEFAULT '[]'::jsonb,
+        signals_weak      jsonb NOT NULL DEFAULT '[]'::jsonb,
+        dimensions_event  jsonb NOT NULL DEFAULT '[]'::jsonb,
+        dimensions_impact jsonb NOT NULL DEFAULT '[]'::jsonb,
+        dimensions_actors jsonb NOT NULL DEFAULT '[]'::jsonb,
+        reviewed_by       text,
+        reviewed_at       timestamp with time zone,
+        created_at        timestamp with time zone NOT NULL DEFAULT now(),
+        updated_at        timestamp with time zone NOT NULL DEFAULT now(),
+        CONSTRAINT imperium_topic_taxonomy_topic_key_version_key
+            UNIQUE (topic_key, taxonomy_version),
+        CONSTRAINT imperium_topic_taxonomy_review_status_check
+            CHECK (review_status IN ('draft', 'approved', 'rejected'))
+    );
+    CREATE INDEX IF NOT EXISTS imperium_topic_taxonomy_parent_idx
+        ON imperium_topic_taxonomy (parent_topic_id);
+    CREATE INDEX IF NOT EXISTS imperium_topic_taxonomy_active_version_idx
+        ON imperium_topic_taxonomy (taxonomy_version, is_active);
+    """
+
+    _DDL_EMBEDDINGS = """
+    CREATE TABLE IF NOT EXISTS imperium_topic_embeddings (
+        topic_id             text NOT NULL REFERENCES imperium_topic_taxonomy (topic_id),
+        taxonomy_version     text NOT NULL,
+        embedding_model      text NOT NULL,
+        embedding_dimension  integer NOT NULL,
+        embedding_input_text text NOT NULL,
+        embedding_input_hash text NOT NULL,
+        embedding_vector     double precision[] NOT NULL,
+        is_active            boolean NOT NULL DEFAULT true,
+        created_at           timestamp with time zone NOT NULL DEFAULT now(),
+        updated_at           timestamp with time zone NOT NULL DEFAULT now(),
+        PRIMARY KEY (topic_id, taxonomy_version, embedding_model)
+    );
+    CREATE INDEX IF NOT EXISTS imperium_topic_embeddings_active_idx
+        ON imperium_topic_embeddings (taxonomy_version, embedding_model, is_active);
+    """
+
+    def main():
+        print(f"Reading taxonomy from {TAXONOMY_PATH}...")
+        with open(TAXONOMY_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        categories = data.get("categories", [])
+        print(f"Parsed {len(categories)} categories.")
+
+        topics_data = []
+        input_texts = []
+        input_hashes = []
+
+        for item in categories:
+            topic_id = item["id"]
+            display_name = item["name"]
+            description = item.get("description", "")
+            version = item.get("version", "2.0")
+            embedding_seeds = item.get("embedding_seeds", [])
+            signals = item.get("signals", {})
+            dimensions = item.get("dimensions", {})
+
+            seen = set()
+            strong = _dedup(signals.get("strong", []), seen)
+            medium = _dedup(signals.get("medium", []), seen)
+            weak = _dedup(signals.get("weak", []), seen)
+            events = _dedup(dimensions.get("event", []), seen)
+            impacts = _dedup(dimensions.get("impact", []), seen)
+            actors = _dedup(dimensions.get("actors", []), seen)
+
+            parts = [
+                f"Topic: {display_name}",
+                f"Description: {description}",
+                _join_items("Embedding seeds", embedding_seeds, sep="; "),
+                _join_items("Strong signals", strong),
+                _join_items("Medium signals", medium),
+                _join_items("Weak signals", weak),
+                _join_items("Key events", events),
+                _join_items("Impact areas", impacts),
+                _join_items("Key actors", actors),
+            ]
+            input_text = "\n".join(p for p in parts if p)
+            input_hash = sha256(input_text.encode("utf-8")).hexdigest()
+
+            topics_data.append({
+                "topic_id": topic_id,
+                "parent_topic_id": None,
+                "topic_key": topic_id,
+                "display_name": display_name,
+                "description": description,
+                "taxonomy_version": version,
+                "is_active": True,
+                "review_status": "approved",
+                "embedding_seeds": json.dumps(embedding_seeds),
+                "signals_strong": json.dumps(signals.get("strong", [])),
+                "signals_medium": json.dumps(signals.get("medium", [])),
+                "signals_weak": json.dumps(signals.get("weak", [])),
+                "dimensions_event": json.dumps(dimensions.get("event", [])),
+                "dimensions_impact": json.dumps(dimensions.get("impact", [])),
+                "dimensions_actors": json.dumps(dimensions.get("actors", []))
+            })
+            input_texts.append(input_text)
+            input_hashes.append(input_hash)
+
+        print(f"Requesting embeddings for {len(input_texts)} topics from llama.cpp at {LLAMA_CPP_BASE_URL}...")
+        embeddings = get_embeddings(LLAMA_CPP_BASE_URL, EMBEDDING_MODEL, input_texts)
+        print(f"Received {len(embeddings)} embeddings. Dimension of first vector: {len(embeddings[0])}")
+
+        print(f"Connecting to database at {TARGET_URI}...")
+        conn = psycopg2.connect(TARGET_URI)
+        try:
+            with conn.cursor() as cur:
+                print("Recreating database tables...")
+                cur.execute(_DROP_EMBEDDINGS)
+                cur.execute(_DROP_TAXONOMY)
+                cur.execute(_DDL_TAXONOMY)
+                cur.execute(_DDL_EMBEDDINGS)
+
+                print("Inserting taxonomy records...")
+                insert_topic_query = """
+                INSERT INTO imperium_topic_taxonomy (
+                    topic_id, parent_topic_id, topic_key, display_name, description,
+                    taxonomy_version, is_active, review_status, embedding_seeds,
+                    signals_strong, signals_medium, signals_weak,
+                    dimensions_event, dimensions_impact, dimensions_actors
+                ) VALUES (
+                    %(topic_id)s, %(parent_topic_id)s, %(topic_key)s, %(display_name)s, %(description)s,
+                    %(taxonomy_version)s, %(is_active)s, %(review_status)s, %(embedding_seeds)s,
+                    %(signals_strong)s, %(signals_medium)s, %(signals_weak)s,
+                    %(dimensions_event)s, %(dimensions_impact)s, %(dimensions_actors)s
+                );
+                """
+                for topic in topics_data:
+                    cur.execute(insert_topic_query, topic)
+
+                print("Inserting embedding records...")
+                insert_embedding_query = """
+                INSERT INTO imperium_topic_embeddings (
+                    topic_id, taxonomy_version, embedding_model, embedding_dimension,
+                    embedding_input_text, embedding_input_hash, embedding_vector, is_active
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, true
+                );
+                """
+                for i, topic in enumerate(topics_data):
+                    cur.execute(insert_embedding_query, (
+                        topic["topic_id"],
+                        topic["taxonomy_version"],
+                        EMBEDDING_MODEL,
+                        len(embeddings[i]),
+                        input_texts[i],
+                        input_hashes[i],
+                        embeddings[i]
+                    ))
+                
+                conn.commit()
+                print("Transaction committed successfully.")
+        except Exception as e:
+            conn.rollback()
+            print(f"Error executing database transaction: {e}", file=sys.stderr)
+            raise
+        finally:
+            conn.close()
+
+        print("Refresh job completed successfully!")
+
+    if __name__ == "__main__":
+        main()
+
+  news_topic_taxonomy_medtop_en_us.json: |
+    {
+      "categories": [
+        {
+          "id": "politics_government",
+          "name": "Politics & Government",
+          "version": "2.0",
+          "description": "Government, elections, public policy, diplomacy, and political institutions.",
+          "embedding_seeds": [
+            "government policy and political institutions",
+            "elections parliament and political parties",
+            "diplomacy international relations and governance"
+          ],
+          "signals": {
+            "strong": ["elections", "government", "parliament", "president", "policy"],
+            "medium": ["minister", "diplomacy", "law", "constitution"],
+            "weak": ["reform", "administration"]
+          },
+          "dimensions": {
+            "event": ["election", "policy decision", "parliament vote"],
+            "impact": ["law change", "regulation"],
+            "actors": ["government", "politicians", "institutions"]
+          }
+        },
+        {
+          "id": "war_security",
+          "name": "War & Security",
+          "version": "2.0",
+          "description": "Armed conflict, military operations, terrorism, and national security.",
+          "embedding_seeds": [
+            "armed conflict and military operations",
+            "terrorism and national security threats",
+            "defense systems and war zones"
+          ],
+          "signals": {
+            "strong": ["war", "army", "military", "terrorism", "attack", "weapons"],
+            "medium": ["defense", "security forces", "militia"],
+            "weak": ["tension", "conflict"]
+          },
+          "dimensions": {
+            "event": ["battle", "attack", "military operation"],
+            "impact": ["casualties", "displacement"],
+            "actors": ["army", "militia", "defense ministry"]
+          }
+        },
+        {
+          "id": "business_economy",
+          "name": "Business & Economy",
+          "version": "2.0",
+          "description": "Markets, macroeconomics, companies, employment, and financial systems.",
+          "embedding_seeds": [
+            "global economy and financial markets",
+            "inflation interest rates and macroeconomics",
+            "companies revenue and business activity",
+            "employment jobs and labor market"
+          ],
+          "signals": {
+            "strong": ["inflation", "interest rates", "GDP", "markets", "stocks", "economy"],
+            "medium": ["jobs", "employment", "trade", "industry"],
+            "weak": ["growth", "business activity"]
+          },
+          "dimensions": {
+            "event": ["market crash", "company earnings"],
+            "impact": ["economic slowdown", "inflation rise"],
+            "actors": ["central bank", "companies", "workers"]
+          }
+        },
+        {
+          "id": "crime_justice",
+          "name": "Crime & Justice",
+          "version": "2.0",
+          "description": "Crime, law enforcement, courts, and legal systems.",
+          "embedding_seeds": [
+            "criminal activity and law enforcement",
+            "courts trials and legal system",
+            "police investigations and justice"
+          ],
+          "signals": {
+            "strong": ["police", "court", "murder", "fraud", "arrest"],
+            "medium": ["investigation", "trial", "judge"],
+            "weak": ["case", "legal issue"]
+          },
+          "dimensions": {
+            "event": ["crime", "trial", "arrest"],
+            "impact": ["sentence", "legal consequences"],
+            "actors": ["police", "judge", "suspect"]
+          }
+        },
+        {
+          "id": "science_technology",
+          "name": "Science & Technology",
+          "version": "2.0",
+          "description": "Scientific research, innovation, computing, AI, and engineering.",
+          "embedding_seeds": [
+            "scientific research and innovation",
+            "artificial intelligence and computing",
+            "engineering robotics and technology systems"
+          ],
+          "signals": {
+            "strong": ["AI", "technology", "software", "research", "robotics"],
+            "medium": ["engineering", "computing", "cybersecurity"],
+            "weak": ["innovation", "digital"]
+          },
+          "dimensions": {
+            "event": ["product launch", "research discovery"],
+            "impact": ["technological advancement"],
+            "actors": ["scientists", "engineers", "companies"]
+          }
+        },
+        {
+          "id": "health",
+          "name": "Health",
+          "version": "2.0",
+          "description": "Medicine, healthcare systems, diseases, and public health.",
+          "embedding_seeds": [
+            "healthcare systems and medical treatment",
+            "diseases public health and epidemics",
+            "hospitals doctors and medical research"
+          ],
+          "signals": {
+            "strong": ["hospital", "doctor", "disease", "virus", "vaccine"],
+            "medium": ["treatment", "patients", "public health"],
+            "weak": ["wellness", "healthcare"]
+          },
+          "dimensions": {
+            "event": ["outbreak", "medical treatment"],
+            "impact": ["health crisis", "recovery"],
+            "actors": ["doctors", "patients", "health ministry"]
+          }
+        },
+        {
+          "id": "environment_weather",
+          "name": "Environment & Weather",
+          "version": "2.0",
+          "description": "Climate, environment, pollution, and weather conditions.",
+          "embedding_seeds": [
+            "climate change and environmental issues",
+            "weather forecasts and meteorology",
+            "pollution sustainability and ecology"
+          ],
+          "signals": {
+            "strong": ["climate change", "pollution", "weather", "storm", "temperature"],
+            "medium": ["rain", "drought", "heatwave"],
+            "weak": ["environment", "nature"]
+          },
+          "dimensions": {
+            "event": ["storm", "heatwave", "forecast"],
+            "impact": ["climate impact", "environmental damage"],
+            "actors": ["meteorologists", "environment agencies"]
+          }
+        },
+        {
+          "id": "disasters_accidents",
+          "name": "Disasters & Accidents",
+          "version": "2.0",
+          "description": "Natural disasters, accidents, and emergency incidents.",
+          "embedding_seeds": [
+            "natural disasters and emergency incidents",
+            "accidents crashes and rescue operations",
+            "fires explosions and evacuations"
+          ],
+          "signals": {
+            "strong": ["earthquake", "flood", "fire", "crash", "explosion"],
+            "medium": ["rescue", "evacuation", "emergency"],
+            "weak": ["incident", "damage"]
+          },
+          "dimensions": {
+            "event": ["earthquake", "crash", "fire"],
+            "impact": ["casualties", "destruction"],
+            "actors": ["rescue teams", "emergency services"]
+          }
+        },
+        {
+          "id": "sports",
+          "name": "Sports",
+          "version": "2.0",
+          "description": "Sports competitions, teams, athletes, and tournaments.",
+          "embedding_seeds": [
+            "sports competitions and tournaments",
+            "teams athletes and matches",
+            "scores championships and leagues"
+          ],
+          "signals": {
+            "strong": ["match", "team", "player", "score", "tournament"],
+            "medium": ["coach", "league", "club"],
+            "weak": ["game", "competition"]
+          },
+          "dimensions": {
+            "event": ["match", "tournament"],
+            "impact": ["win", "loss"],
+            "actors": ["players", "teams", "coaches"]
+          }
+        },
+        {
+          "id": "entertainment_culture",
+          "name": "Entertainment & Culture",
+          "version": "2.0",
+          "description": "Media, arts, culture, celebrities, and entertainment industries.",
+          "embedding_seeds": [
+            "movies music and entertainment industry",
+            "arts culture and heritage",
+            "media celebrities and broadcasting"
+          ],
+          "signals": {
+            "strong": ["film", "music", "celebrity", "tv", "festival"],
+            "medium": ["media", "art", "concert"],
+            "weak": ["entertainment", "culture"]
+          },
+          "dimensions": {
+            "event": ["movie release", "concert"],
+            "impact": ["audience reaction"],
+            "actors": ["artists", "celebrities", "media"]
+          }
+        },
+        {
+          "id": "lifestyle_travel",
+          "name": "Lifestyle & Travel",
+          "version": "2.0",
+          "description": "Travel, tourism, fashion, food, and leisure activities.",
+          "embedding_seeds": [
+            "travel tourism and leisure activities",
+            "fashion lifestyle and shopping",
+            "food restaurants and hospitality"
+          ],
+          "signals": {
+            "strong": ["travel", "tourism", "fashion", "food", "restaurant"],
+            "medium": ["shopping", "luxury", "hotel"],
+            "weak": ["lifestyle", "leisure"]
+          },
+          "dimensions": {
+            "event": ["trip", "festival", "launch"],
+            "impact": ["tourism growth"],
+            "actors": ["tourists", "brands", "travelers"]
+          }
+        },
+        {
+          "id": "education",
+          "name": "Education",
+          "version": "2.0",
+          "description": "Schools, universities, training, and learning systems.",
+          "embedding_seeds": [
+            "education systems and schools",
+            "universities students and academic research",
+            "training programs and learning"
+          ],
+          "signals": {
+            "strong": ["school", "university", "student", "teacher", "exam"],
+            "medium": ["training", "curriculum", "scholarship"],
+            "weak": ["learning", "education"]
+          },
+          "dimensions": {
+            "event": ["exam", "graduation"],
+            "impact": ["education outcome"],
+            "actors": ["students", "teachers", "institutions"]
+          }
+        },
+        {
+          "id": "religion_society",
+          "name": "Religion & Society",
+          "version": "2.0",
+          "description": "Religion, social issues, communities, and human-interest stories.",
+          "embedding_seeds": [
+            "religion faith and spiritual practices",
+            "social issues and communities",
+            "human interest stories and society"
+          ],
+          "signals": {
+            "strong": ["religion", "mosque", "church", "migration", "society"],
+            "medium": ["family", "community", "welfare"],
+            "weak": ["people", "social"]
+          },
+          "dimensions": {
+            "event": ["religious event", "migration"],
+            "impact": ["social change"],
+            "actors": ["communities", "families", "groups"]
+          }
+        }
+      ]
+    }
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: refresh-topic-embeddings-job
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      containers:
+      - name: refresher
+        image: python:3.11-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - pip install psycopg2-binary && python -u /app/refresh.py
+        volumeMounts:
+        - name: app-volume
+          mountPath: /app
+        env:
+        - name: TARGET_URI
+          value: "postgresql://imperium:imperium-secret@imperium-pg-rw:5432/imperium"
+        - name: LLAMA_CPP_BASE_URL
+          value: "http://imperium-streaming-news-processing-llama-cpp:8080"
+        - name: EMBEDDING_MODEL
+          value: "embeddinggemma-300M-Q8_0.gguf"
+      restartPolicy: Never
+      volumes:
+      - name: app-volume
+        configMap:
+          name: refresh-topic-embeddings-script

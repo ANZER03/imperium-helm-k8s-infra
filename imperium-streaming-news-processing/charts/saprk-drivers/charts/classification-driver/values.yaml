@@ -1,0 +1,46 @@
+image:
+  repository: "registry.registry.svc.cluster.local:5000/imperium-classification-driver"
+  tag: "1.0.0"
+
+kafka:
+  bootstrapServers: "imperium-kafka-kafka-bootstrap:9092"
+
+schemaRegistry:
+  url: "http://imperium-streaming-news-processing-schema-registry:8081"
+
+postgres:
+  dsn: "postgresql://imperium:imperium-secret@imperium-pg-rw:5432/imperium"
+
+checkpoints:
+  root: "/tmp/imperium/checkpoints/processing"
+  name: "classification-latest-v1"
+
+nvidia:
+  embeddingBaseUrl: "http://imperium-streaming-news-processing-llama-cpp:8080/v1"
+  embeddingModel: "embeddinggemma-300M-Q8_0.gguf"
+  apiKey: "dummy-key-for-local-llama-cpp"
+  rpmBudget: 24
+
+classification:
+  startingOffsets: "latest"
+  kafkaGroupId: "imperium-classification-driver-latest-v1"
+  maxOffsetsPerTrigger: 10000
+  triggerProcessingTime: "10 seconds"
+  maxArticlesPerBatch: 700
+  embeddingBatchSize: 100
+  articleTable: "imperium_articles"
+  topicTaxonomyTable: "imperium_topic_taxonomy"
+  topicEmbeddingsTable: "imperium_topic_embeddings"
+  classifiedTopic: "imperium.news.classified"
+  classifiedDlqTopic: "imperium.news.classified.dlq"
+
+spark:
+  serviceAccount: ""
+  driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "1g"
+  executor:
+    instances: 1
+    cores: 1
+    memory: "1g"

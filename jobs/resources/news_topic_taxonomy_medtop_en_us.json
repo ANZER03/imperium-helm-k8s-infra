@@ -1,0 +1,292 @@
+{
+  "categories": [
+
+    {
+      "id": "politics_government",
+      "name": "Politics & Government",
+      "version": "2.0",
+      "description": "Government, elections, public policy, diplomacy, and political institutions.",
+      "embedding_seeds": [
+        "government policy and political institutions",
+        "elections parliament and political parties",
+        "diplomacy international relations and governance"
+      ],
+      "signals": {
+        "strong": ["elections", "government", "parliament", "president", "policy"],
+        "medium": ["minister", "diplomacy", "law", "constitution"],
+        "weak": ["reform", "administration"]
+      },
+      "dimensions": {
+        "event": ["election", "policy decision", "parliament vote"],
+        "impact": ["law change", "regulation"],
+        "actors": ["government", "politicians", "institutions"]
+      }
+    },
+
+    {
+      "id": "war_security",
+      "name": "War & Security",
+      "version": "2.0",
+      "description": "Armed conflict, military operations, terrorism, and national security.",
+      "embedding_seeds": [
+        "armed conflict and military operations",
+        "terrorism and national security threats",
+        "defense systems and war zones"
+      ],
+      "signals": {
+        "strong": ["war", "army", "military", "terrorism", "attack", "weapons"],
+        "medium": ["defense", "security forces", "militia"],
+        "weak": ["tension", "conflict"]
+      },
+      "dimensions": {
+        "event": ["battle", "attack", "military operation"],
+        "impact": ["casualties", "displacement"],
+        "actors": ["army", "militia", "defense ministry"]
+      }
+    },
+
+    {
+      "id": "business_economy",
+      "name": "Business & Economy",
+      "version": "2.0",
+      "description": "Markets, macroeconomics, companies, employment, and financial systems.",
+      "embedding_seeds": [
+        "global economy and financial markets",
+        "inflation interest rates and macroeconomics",
+        "companies revenue and business activity",
+        "employment jobs and labor market"
+      ],
+      "signals": {
+        "strong": ["inflation", "interest rates", "GDP", "markets", "stocks", "economy"],
+        "medium": ["jobs", "employment", "trade", "industry"],
+        "weak": ["growth", "business activity"]
+      },
+      "dimensions": {
+        "event": ["market crash", "company earnings"],
+        "impact": ["economic slowdown", "inflation rise"],
+        "actors": ["central bank", "companies", "workers"]
+      }
+    },
+
+    {
+      "id": "crime_justice",
+      "name": "Crime & Justice",
+      "version": "2.0",
+      "description": "Crime, law enforcement, courts, and legal systems.",
+      "embedding_seeds": [
+        "criminal activity and law enforcement",
+        "courts trials and legal system",
+        "police investigations and justice"
+      ],
+      "signals": {
+        "strong": ["police", "court", "murder", "fraud", "arrest"],
+        "medium": ["investigation", "trial", "judge"],
+        "weak": ["case", "legal issue"]
+      },
+      "dimensions": {
+        "event": ["crime", "trial", "arrest"],
+        "impact": ["sentence", "legal consequences"],
+        "actors": ["police", "judge", "suspect"]
+      }
+    },
+
+    {
+      "id": "science_technology",
+      "name": "Science & Technology",
+      "version": "2.0",
+      "description": "Scientific research, innovation, computing, AI, and engineering.",
+      "embedding_seeds": [
+        "scientific research and innovation",
+        "artificial intelligence and computing",
+        "engineering robotics and technology systems"
+      ],
+      "signals": {
+        "strong": ["AI", "technology", "software", "research", "robotics"],
+        "medium": ["engineering", "computing", "cybersecurity"],
+        "weak": ["innovation", "digital"]
+      },
+      "dimensions": {
+        "event": ["product launch", "research discovery"],
+        "impact": ["technological advancement"],
+        "actors": ["scientists", "engineers", "companies"]
+      }
+    },
+
+    {
+      "id": "health",
+      "name": "Health",
+      "version": "2.0",
+      "description": "Medicine, healthcare systems, diseases, and public health.",
+      "embedding_seeds": [
+        "healthcare systems and medical treatment",
+        "diseases public health and epidemics",
+        "hospitals doctors and medical research"
+      ],
+      "signals": {
+        "strong": ["hospital", "doctor", "disease", "virus", "vaccine"],
+        "medium": ["treatment", "patients", "public health"],
+        "weak": ["wellness", "healthcare"]
+      },
+      "dimensions": {
+        "event": ["outbreak", "medical treatment"],
+        "impact": ["health crisis", "recovery"],
+        "actors": ["doctors", "patients", "health ministry"]
+      }
+    },
+
+    {
+      "id": "environment_weather",
+      "name": "Environment & Weather",
+      "version": "2.0",
+      "description": "Climate, environment, pollution, and weather conditions.",
+      "embedding_seeds": [
+        "climate change and environmental issues",
+        "weather forecasts and meteorology",
+        "pollution sustainability and ecology"
+      ],
+      "signals": {
+        "strong": ["climate change", "pollution", "weather", "storm", "temperature"],
+        "medium": ["rain", "drought", "heatwave"],
+        "weak": ["environment", "nature"]
+      },
+      "dimensions": {
+        "event": ["storm", "heatwave", "forecast"],
+        "impact": ["climate impact", "environmental damage"],
+        "actors": ["meteorologists", "environment agencies"]
+      }
+    },
+
+    {
+      "id": "disasters_accidents",
+      "name": "Disasters & Accidents",
+      "version": "2.0",
+      "description": "Natural disasters, accidents, and emergency incidents.",
+      "embedding_seeds": [
+        "natural disasters and emergency incidents",
+        "accidents crashes and rescue operations",
+        "fires explosions and evacuations"
+      ],
+      "signals": {
+        "strong": ["earthquake", "flood", "fire", "crash", "explosion"],
+        "medium": ["rescue", "evacuation", "emergency"],
+        "weak": ["incident", "damage"]
+      },
+      "dimensions": {
+        "event": ["earthquake", "crash", "fire"],
+        "impact": ["casualties", "destruction"],
+        "actors": ["rescue teams", "emergency services"]
+      }
+    },
+
+    {
+      "id": "sports",
+      "name": "Sports",
+      "version": "2.0",
+      "description": "Sports competitions, teams, athletes, and tournaments.",
+      "embedding_seeds": [
+        "sports competitions and tournaments",
+        "teams athletes and matches",
+        "scores championships and leagues"
+      ],
+      "signals": {
+        "strong": ["match", "team", "player", "score", "tournament"],
+        "medium": ["coach", "league", "club"],
+        "weak": ["game", "competition"]
+      },
+      "dimensions": {
+        "event": ["match", "tournament"],
+        "impact": ["win", "loss"],
+        "actors": ["players", "teams", "coaches"]
+      }
+    },
+
+    {
+      "id": "entertainment_culture",
+      "name": "Entertainment & Culture",
+      "version": "2.0",
+      "description": "Media, arts, culture, celebrities, and entertainment industries.",
+      "embedding_seeds": [
+        "movies music and entertainment industry",
+        "arts culture and heritage",
+        "media celebrities and broadcasting"
+      ],
+      "signals": {
+        "strong": ["film", "music", "celebrity", "tv", "festival"],
+        "medium": ["media", "art", "concert"],
+        "weak": ["entertainment", "culture"]
+      },
+      "dimensions": {
+        "event": ["movie release", "concert"],
+        "impact": ["audience reaction"],
+        "actors": ["artists", "celebrities", "media"]
+      }
+    },
+
+    {
+      "id": "lifestyle_travel",
+      "name": "Lifestyle & Travel",
+      "version": "2.0",
+      "description": "Travel, tourism, fashion, food, and leisure activities.",
+      "embedding_seeds": [
+        "travel tourism and leisure activities",
+        "fashion lifestyle and shopping",
+        "food restaurants and hospitality"
+      ],
+      "signals": {
+        "strong": ["travel", "tourism", "fashion", "food", "restaurant"],
+        "medium": ["shopping", "luxury", "hotel"],
+        "weak": ["lifestyle", "leisure"]
+      },
+      "dimensions": {
+        "event": ["trip", "festival", "launch"],
+        "impact": ["tourism growth"],
+        "actors": ["tourists", "brands", "travelers"]
+      }
+    },
+
+    {
+      "id": "education",
+      "name": "Education",
+      "version": "2.0",
+      "description": "Schools, universities, training, and learning systems.",
+      "embedding_seeds": [
+        "education systems and schools",
+        "universities students and academic research",
+        "training programs and learning"
+      ],
+      "signals": {
+        "strong": ["school", "university", "student", "teacher", "exam"],
+        "medium": ["training", "curriculum", "scholarship"],
+        "weak": ["learning", "education"]
+      },
+      "dimensions": {
+        "event": ["exam", "graduation"],
+        "impact": ["education outcome"],
+        "actors": ["students", "teachers", "institutions"]
+      }
+    },
+
+    {
+      "id": "religion_society",
+      "name": "Religion & Society",
+      "version": "2.0",
+      "description": "Religion, social issues, communities, and human-interest stories.",
+      "embedding_seeds": [
+        "religion faith and spiritual practices",
+        "social issues and communities",
+        "human interest stories and society"
+      ],
+      "signals": {
+        "strong": ["religion", "mosque", "church", "migration", "society"],
+        "medium": ["family", "community", "welfare"],
+        "weak": ["people", "social"]
+      },
+      "dimensions": {
+        "event": ["religious event", "migration"],
+        "impact": ["social change"],
+        "actors": ["communities", "families", "groups"]
+      }
+    }
+
+  ]
+}
