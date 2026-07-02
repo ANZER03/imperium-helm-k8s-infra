@@ -17,11 +17,20 @@ dependencies:
 - name: redis-projector
   repository: file://charts/projectors/redis-projector
   version: 0.1.0
+- name: postgres-projector
+  repository: file://charts/projectors/postgres-projector
+  version: 0.1.0
 - name: clickstack
   repository: https://clickhouse.github.io/ClickStack-helm-charts
   version: 3.0.0
 - name: clickhouse-cluster
   repository: file://charts/clickhouse-cluster
   version: 0.1.0
-digest: sha256:9645dd09d220f902238a2401aa9d6e7ad9d8e0e9f4499861343dd9b4cc7c7548
-generated: "2026-07-02T00:17:57.35654194Z"
+- name: imperium-news-app
+  repository: file://charts/imperium-news-app
+  version: 0.1.0
+- name: imperium-frontend
+  repository: file://charts/imperium-frontend
+  version: 0.1.0
+digest: sha256:55e677ad757005e4d81791bc6c91b372d723cec7f4b25e434c8130929e4d1e2c
+generated: "2026-07-02T01:59:43.805799836Z"

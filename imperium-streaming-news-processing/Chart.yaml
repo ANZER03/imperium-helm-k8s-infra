@@ -46,6 +46,10 @@ dependencies:
     version: 0.1.0
     repository: "file://charts/projectors/redis-projector"
     condition: redis-projector.enabled
+  - name: postgres-projector
+    version: 0.1.0
+    repository: "file://charts/projectors/postgres-projector"
+    condition: postgres-projector.enabled
   # NOTE: clickstack-operators is installed as a separate Helm release (prerequisite for CRDs)
   - name: clickstack
     version: 3.0.0
@@ -55,3 +59,11 @@ dependencies:
     version: 0.1.0
     repository: "file://charts/clickhouse-cluster"
     condition: clickhouse-cluster.enabled
+  - name: imperium-news-app
+    version: 0.1.0
+    repository: "file://charts/imperium-news-app"
+    condition: imperium-news-app.enabled
+  - name: imperium-frontend
+    version: 0.1.0
+    repository: "file://charts/imperium-frontend"
+    condition: imperium-frontend.enabled

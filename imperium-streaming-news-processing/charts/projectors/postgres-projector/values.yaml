@@ -11,4 +11,4 @@ env:
   - name: SCHEMA_REGISTRY_URL
     value: "http://imperium-streaming-news-processing-schema-registry:8081"
   - name: POSTGRES_DSN
-    value: "postgresql://imperium:imperium@imperium-pg-rw:5432/imperium"
+    value: "postgresql://imperium:imperium-secret@imperium-pg-rw:5432/imperium"

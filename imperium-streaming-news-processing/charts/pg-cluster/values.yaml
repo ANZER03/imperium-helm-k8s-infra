@@ -40,6 +40,54 @@ auth:
 # Each key is a filename, value is the SQL content.
 # Scripts are executed in alphabetical order on the application database.
 initScripts:
+    01_create_articles_table.sql: |
+        CREATE TABLE IF NOT EXISTS public.imperium_news_articles (
+            article_id TEXT PRIMARY KEY,
+            source_news_id BIGINT,
+            link_id BIGINT,
+            authority_id BIGINT,
+            country_id INTEGER,
+            country_name TEXT,
+            source_name TEXT,
+            source_domain TEXT,
+            rubric_id INTEGER,
+            rubric_title TEXT,
+            language_id INTEGER,
+            language_code VARCHAR(10),
+            
+            classification_status VARCHAR(50) NOT NULL,
+            classification_method TEXT,
+            classification_model TEXT,
+            root_topic_id TEXT,
+            root_topic_label TEXT,
+            primary_topic_id TEXT,
+            primary_topic_label TEXT,
+            topic_confidence DOUBLE PRECISION,
+            topic_candidates JSONB,
+            
+            title TEXT,
+            url TEXT,
+            body_text TEXT,
+            body_text_clean TEXT,
+            excerpt TEXT,
+            image_url TEXT,
+            video_url TEXT,
+            reporter TEXT,
+            source_date_text TEXT,
+            published_at BIGINT,
+            crawled_at BIGINT,
+            is_video BOOLEAN,
+            dimension_status VARCHAR(50),
+            missing_dimensions JSONB,
+            schema_version INTEGER,
+            processed_at TIMESTAMP,
+            is_delete BOOLEAN,
+            classified_at TIMESTAMP,
+            
+            embedding_vector REAL[],
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     00-create-cdc-user.sql: |
         -- Create replication user for CDC
         CREATE ROLE debezium WITH REPLICATION LOGIN PASSWORD 'debezium-secret';

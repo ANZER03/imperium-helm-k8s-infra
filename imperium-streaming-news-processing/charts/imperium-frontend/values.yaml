@@ -1,0 +1,17 @@
+replicaCount: 1
+
+image:
+  repository: registry.registry.svc.cluster.local:5000/imperium-frontend
+  tag: "1.0.1"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 3000
+
+# Environment variables mapping to the Frontend App
+config:
+  BACKEND_URL: "http://imperium-streaming-news-processing-imperium-news-app:8999"

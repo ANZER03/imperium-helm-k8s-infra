@@ -1,0 +1,40 @@
+replicaCount: 1
+
+image:
+  repository: registry.registry.svc.cluster.local:5000/imperium-news-app
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8999
+
+# Environment variables mapping to the Spring Boot App
+config:
+  SERVER_PORT: "8999"
+  SPRING_R2DBC_URL: "r2dbc:postgresql://imperium-pg-rw:5432/imperium"
+  SPRING_R2DBC_USERNAME: "imperium"
+  SPRING_DATA_REDIS_HOST: "imperium-streaming-news-processing-redis"
+  SPRING_DATA_REDIS_PORT: "6379"
+  SPRING_AI_VECTORSTORE_QDRANT_HOST: ""
+  SPRING_AI_VECTORSTORE_QDRANT_PORT: "6334"
+  SPRING_AI_VECTORSTORE_QDRANT_COLLECTION_NAME: "imperium_articles"
+  SEARCH_ELASTICSEARCH_BASE_URL: ""
+  SEARCH_ELASTICSEARCH_INDEX: "imperium_articles_search"
+  JAVA_TOOL_OPTIONS: "-javaagent:/otel/otel-javaagent.jar"
+  OTEL_SERVICE_NAME: "imperium-news-app"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=imperium-dev,service.namespace=backend"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://imperium-streaming-news-processing-opentelemetry-collector:4317"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+  OTEL_METRICS_EXPORTER: "otlp"
+  OTEL_TRACES_EXPORTER: "otlp"
+  OTEL_LOGS_EXPORTER: "otlp"
+  OTEL_METRIC_EXPORT_INTERVAL: "15000"
+
+secrets:
+  SPRING_R2DBC_PASSWORD: "imperium-secret"
+  SPRING_DATA_REDIS_PASSWORD: ""
+  SPRING_AI_VECTORSTORE_QDRANT_API_KEY: ""
