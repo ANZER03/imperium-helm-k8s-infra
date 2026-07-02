@@ -117,3 +117,18 @@ spark-operator:
     jobNamespaces:
       - imperium-news-ns
 
+redis-projector:
+  enabled: true
+
+clickstack-operators: {} # use operator defaults (bundles ClickHouse + MongoDB operators)
+
+clickstack:
+  enabled: true
+  fullnameOverride: "imperium-clickstack"
+  # Disable bundled OTel collector — conflicts with our existing opentelemetry-collector
+  # (both use the same upstream chart, causing Helm template name collisions)
+  otel-collector:
+    enabled: false
+
+clickhouse-cluster:
+  enabled: true

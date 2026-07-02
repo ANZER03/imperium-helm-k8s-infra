@@ -1,0 +1,43 @@
+apiVersion: clickhouse.com/v1alpha1
+kind: ClickHouseCluster
+metadata:
+  name: {{ include "clickhouse-cluster.fullname" . }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.clickhouse.replicas }}
+  shards: {{ .Values.clickhouse.shards }}
+  keeperClusterRef:
+    name: {{ include "clickhouse-cluster.fullname" . }}-keeper
+  podTemplate:
+    metadata:
+      labels:
+        app: {{ include "clickhouse-cluster.fullname" . }}
+    spec:
+      {{- if .Values.clickhouse.antiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - {{ include "clickhouse-cluster.fullname" . }}
+              topologyKey: {{ .Values.clickhouse.antiAffinity.topologyKey | quote }}
+      {{- end }}
+      containers:
+        - name: clickhouse
+          {{- if .Values.clickhouse.resources }}
+          resources:
+            {{- toYaml .Values.clickhouse.resources | nindent 12 }}
+          {{- end }}
+  dataVolumeClaimSpec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: {{ .Values.clickhouse.storage.size | quote }}
+    {{- if .Values.clickhouse.storage.storageClass }}
+    storageClassName: {{ .Values.clickhouse.storage.storageClass | quote }}
+    {{- end }}

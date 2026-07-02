@@ -172,3 +172,99 @@ Push the image to the local registry:
 docker push localhost:30500/llama-cpp-gemma:latest
 ```
 
+---
+
+## 7. Accessing UIs (Port Forwarding)
+
+Run these commands in separate terminal windows to keep the tunnels open.
+
+### Headlamp (Cluster Dashboard)
+```bash
+kubectl port-forward svc/headlamp -n headlamp 58222:80
+```
+*Access at: http://localhost:58222*
+
+### PgAdmin (PostgreSQL UI)
+```bash
+kubectl port-forward svc/imperium-streaming-news-processing-pgadmin -n imperium-news-ns 5050:80
+```
+*Access at: http://localhost:5050*
+
+### Kafka UI
+```bash
+kubectl port-forward svc/imperium-streaming-news-processing-kafka-ui -n imperium-news-ns 8087:80
+```
+*Access at: http://localhost:8087*
+
+### Docker Registry
+```bash
+kubectl port-forward svc/registry -n registry 5000:5000
+```
+*Note: This is often already running in the background. Access at: localhost:30500*
+
+---
+
+## 8. Generating Admin Token for Headlamp
+
+To log in to Headlamp with full administrative privileges, you need to create a service account with a `cluster-admin` role binding and generate a token for it.
+
+Run the following commands:
+
+```bash
+# 1. Create a service account named 'headlamp-admin' in the kube-system namespace
+kubectl create serviceaccount headlamp-admin -n kube-system
+
+# 2. Bind the 'cluster-admin' role to this new service account
+kubectl create clusterrolebinding headlamp-admin \
+  --clusterrole=cluster-admin \
+  --serviceaccount=kube-system:headlamp-admin
+
+# 3. Generate a token to use for logging in to the UI
+kubectl create token headlamp-admin -n kube-system
+```
+
+*Copy the output of the last command and paste it into the Headlamp login screen.*
+
+---
+
+## 9. ClickHouse and ClickStack (Observability)
+
+The project includes a production-ready ClickHouse data cluster (`clickhouse-cluster`) and the **ClickStack** observability platform (HyperDX + MongoDB + OpenTelemetry).
+
+### Deployment Order
+Due to Kubernetes Custom Resource Definition (CRD) registration requirements, the ClickHouse and MongoDB operators must be installed *before* the main umbrella chart.
+
+**1. Install Operators First:**
+```bash
+helm install clickstack-operators clickstack/clickstack-operators -n imperium-news-ns
+```
+
+**2. Verify CRDs:**
+Wait until the operators are running and CRDs are registered:
+```bash
+kubectl get crd | grep -E 'clickhouse|mongodb'
+```
+
+**3. Deploy the Umbrella Chart:**
+Deploy the rest of the stack, including the `clickhouse-cluster` subchart and the `clickstack` dependency:
+```bash
+helm dependency update ./imperium-streaming-news-processing
+helm upgrade --install imperium-streaming-news-processing ./imperium-streaming-news-processing -n imperium-news-ns
+```
+
+### Accessing HyperDX UI
+To view logs, metrics, and traces collected by the OpenTelemetry collector in ClickStack:
+
+```bash
+kubectl port-forward svc/imperium-clickstack -n imperium-news-ns 3005:3000
+```
+*Access at: http://localhost:3005*
+
+> **Note:** The default login requires creating a new user on the first visit to the UI.
+
+### ClickHouse Data Cluster
+The data cluster is managed by the operator via the `ClickHouseCluster` CR. You can verify its status:
+```bash
+kubectl get clickhouseclusters -n imperium-news-ns
+kubectl get pods -n imperium-news-ns | grep clickhouse
+```

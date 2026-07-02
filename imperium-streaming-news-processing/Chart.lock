@@ -14,5 +14,14 @@ dependencies:
 - name: kafka-connect-sinks
   repository: file://charts/kafka-connect-sinks
   version: 0.1.0
-digest: sha256:c471557ac040fa3d3c42414b45641e763351ef2a8d396876469b08c3743762c7
-generated: "2026-06-29T15:13:35.101884609Z"
+- name: redis-projector
+  repository: file://charts/projectors/redis-projector
+  version: 0.1.0
+- name: clickstack
+  repository: https://clickhouse.github.io/ClickStack-helm-charts
+  version: 3.0.0
+- name: clickhouse-cluster
+  repository: file://charts/clickhouse-cluster
+  version: 0.1.0
+digest: sha256:9645dd09d220f902238a2401aa9d6e7ad9d8e0e9f4499861343dd9b4cc7c7548
+generated: "2026-07-02T00:17:57.35654194Z"

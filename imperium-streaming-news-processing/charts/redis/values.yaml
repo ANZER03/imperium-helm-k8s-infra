@@ -13,8 +13,8 @@ redis:
   maxmemoryPolicy: "noeviction"
   # Password authentication
   auth:
-    enabled: true
-    password: "redis-123@@"
+    enabled: false
+    password: ""
 
 resources:
   requests:

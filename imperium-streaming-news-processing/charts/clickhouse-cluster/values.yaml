@@ -1,0 +1,44 @@
+# Default values for clickhouse-cluster.
+# This is a YAML-formatted file.
+fullnameOverride: "imperium-clickhouse"
+
+# ClickHouse Keeper configuration (coordination layer)
+keeper:
+  replicas: 3
+
+  resources:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+  storage:
+    size: 20Gi
+    storageClass: "" # empty = default storage class
+
+  antiAffinity:
+    enabled: true
+    topologyKey: "kubernetes.io/hostname"
+
+# ClickHouse Server configuration
+clickhouse:
+  shards: 2
+  replicas: 1
+
+  resources:
+    requests:
+      cpu: "4"
+      memory: "4Gi"
+    limits:
+      cpu: "4"
+      memory: "4Gi"
+
+  storage:
+    size: 20Gi
+    storageClass: "" # empty = default storage class
+
+  antiAffinity:
+    enabled: true
+    topologyKey: "kubernetes.io/hostname"

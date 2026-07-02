@@ -1,0 +1,14 @@
+replicaCount: 1
+
+image:
+  repository: registry.registry.svc.cluster.local:5000/imperium-postgres-projector
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+env:
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: "imperium-kafka-kafka-bootstrap:9092"
+  - name: SCHEMA_REGISTRY_URL
+    value: "http://imperium-streaming-news-processing-schema-registry:8081"
+  - name: POSTGRES_DSN
+    value: "postgresql://imperium:imperium@imperium-pg-rw:5432/imperium"
