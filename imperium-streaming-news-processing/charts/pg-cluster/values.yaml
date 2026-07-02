@@ -53,7 +53,7 @@ initScripts:
             rubric_id INTEGER,
             rubric_title TEXT,
             language_id INTEGER,
-            language_code VARCHAR(10),
+            language_code VARCHAR(50),
             
             classification_status VARCHAR(50) NOT NULL,
             classification_method TEXT,

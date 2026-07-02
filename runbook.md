@@ -202,6 +202,17 @@ kubectl port-forward svc/registry -n registry 5000:5000
 ```
 *Note: This is often already running in the background. Access at: localhost:30500*
 
+### ArgoCD (GitOps UI)
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+*Access at: https://localhost:8080*
+
+*Retrieve the initial admin password with:*
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+```
+
 ---
 
 ## 8. Generating Admin Token for Headlamp
