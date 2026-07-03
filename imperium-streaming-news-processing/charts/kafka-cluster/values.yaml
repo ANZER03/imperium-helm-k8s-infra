@@ -27,30 +27,13 @@ kafka:
       tls: true
 
 # Node Pools configuration for KRaft mode
+# All 3 nodes act as both controller and broker, giving a 3-voter KRaft quorum.
+# This means we can lose 1 node and still maintain consensus (majority = 2/3).
 nodePools:
-  # Pool with combined roles (Broker and Controller) acting as control plane (masters)
   - name: controller-broker
-    replicas: 2
+    replicas: 3
     roles:
       - controller
-      - broker
-    storage:
-      type: persistent-claim
-      size: 50Gi
-      class: "" # Set to empty to use the default storage class, or specify a custom one
-      deleteClaim: false
-    resources:
-      requests:
-        memory: 2Gi
-        cpu: "1"
-      limits:
-        memory: 4Gi
-        cpu: "2"
-
-  # Pool with Broker role only
-  - name: broker
-    replicas: 1
-    roles:
       - broker
     storage:
       type: persistent-claim
