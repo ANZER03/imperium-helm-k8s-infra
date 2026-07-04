@@ -14,6 +14,8 @@ kafka-cluster:
 UI:
   enabled: true
   kafka-ui:
+    env:
+      SERVER_SERVLET_CONTEXT_PATH: "/kafka"
     kafka:
       schemaRegistry: "http://imperium-streaming-news-processing-schema-registry:8081"
       kafkaConnectAddress: "http://imperium-streaming-news-processing-kafka-connect-connect-api:8083"

@@ -37,5 +37,11 @@ spec:
             - name: KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS
               value: {{ .Values.kafka.kafkaConnectAddress | quote }}
             {{- end }}
+            {{- if .Values.env }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
