@@ -112,9 +112,9 @@ kafka-connect-connectors:
     clusterName: "imperium-streaming-news-processing-kafka-connect"
   # Snapshot connectors disabled per user request
   reference:
-    enabled: true
+    enabled: false
   metadata:
-    enabled: true
+    enabled: false
   news:
     enabled: true
   # Test connectors (off by default; flip to true to validate CDC)
@@ -136,19 +136,19 @@ kafka-connect-sinks:
   connect:
     clusterName: "imperium-streaming-news-processing-kafka-connect"
   countriesSink:
-    enabled: true
+    enabled: false
   languagesSink:
-    enabled: true
+    enabled: false
   authoritiesSink:
-    enabled: true
+    enabled: false
     name: "imperium-authorities-sink-v3"
     tasksMax: 1
   rubricsSink:
-    enabled: true
+    enabled: false
   seditionsSink:
-    enabled: true
+    enabled: false
   linksSink:
-    enabled: true
+    enabled: false
     name: "imperium-links-sink-v3"
     tasksMax: 1
 
@@ -181,3 +181,17 @@ imperium-news-app:
 
 imperium-frontend:
   enabled: true
+
+kong-gateway:
+  enabled: true
+  # Pass-through values to the upstream kong/gateway-operator chart
+  gateway-operator:
+    env:
+      GATEWAY_OPERATOR_ANONYMOUS_REPORTS: "false"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

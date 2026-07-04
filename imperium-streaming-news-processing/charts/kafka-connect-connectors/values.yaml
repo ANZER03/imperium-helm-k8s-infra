@@ -26,7 +26,7 @@ connect:
 # Captures reference/lookup tables once at startup; no streaming.
 # ---------------------------------------------------------------------------
 reference:
-  enabled: true
+  enabled: false
   name: imperium-reference-cdc-v2
   topicPrefix: imperium.reference
   slotName: debezium_reference_slot_v2
@@ -42,7 +42,7 @@ reference:
 # Backfill signals sent via Kafka topic.
 # ---------------------------------------------------------------------------
 metadata:
-  enabled: true
+  enabled: false
   name: imperium-metadata-cdc-v2
   topicPrefix: imperium.metadata
   slotName: debezium_metadata_slot_v2

@@ -16,13 +16,13 @@ connect:
 
 # Country Sink configuration
 countriesSink:
-  enabled: true
+  enabled: false
   name: imperium-countries-sink-v2
   tasksMax: 1
 
 # Language Sink configuration
 languagesSink:
-  enabled: true
+  enabled: false
   name: imperium-languages-sink
   tasksMax: 1
 
