@@ -1,0 +1,6 @@
+dependencies:
+- name: gateway-operator
+  repository: https://charts.konghq.com
+  version: 0.6.1
+digest: sha256:7cd9c6a8aa77cd9c2b1a973e3e8846f383b2c432e3e54f5102483d0bf49e24c4
+generated: "2026-07-03T23:03:10.946405577Z"

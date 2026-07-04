@@ -213,6 +213,17 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
 ```
 
+### Jenkins (CI/CD UI)
+```bash
+kubectl port-forward svc/jenkins -n jenkins 8082:8080
+```
+*Access at: http://localhost:8082*
+
+*Retrieve the admin password with:*
+```bash
+kubectl -n jenkins get secret jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 -d; echo
+```
+
 ---
 
 ## 8. Generating Admin Token for Headlamp
@@ -278,4 +289,169 @@ The data cluster is managed by the operator via the `ClickHouseCluster` CR. You 
 ```bash
 kubectl get clickhouseclusters -n imperium-news-ns
 kubectl get pods -n imperium-news-ns | grep clickhouse
+```
+
+---
+
+## 10. Configuring Jenkins SSH Agent for GitHub (Write Access)
+
+To allow Jenkins to pull and push (write access) to the GitHub repository:
+
+### Step 1: Add the Deploy Key to GitHub
+1. Open the repository on GitHub: [ANZER03/imperium-helm-k8s-infra](https://github.com/ANZER03/imperium-helm-k8s-infra)
+2. Go to **Settings** > **Deploy keys**.
+3. Click **Add deploy key**.
+4. Set the title to `jenkins-agent-bot`.
+5. Paste the following public key (from [jenkins-agent-bot.pub](file:///home/anouar.zerrik/projects/pfe/imperium-helm-k8s-infra/jenkins-agent-bot.pub)):
+   ```text
+   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOsn+EzpCjNVTJ1WUZRoB/0z8VHgup1ySvNfg/tc1/EM jenkins-agent-bot
+   ```
+6. **Crucial:** Select the **Allow write access** checkbox.
+7. Click **Add key**.
+
+### Step 2: Add the Private Key to Jenkins Credentials
+1. Access Jenkins UI at [http://localhost:8082](http://localhost:8082).
+2. Go to **Manage Jenkins** > **Credentials** > **System** > **Global credentials (unrestricted)**.
+3. Click **Add Credentials**.
+4. Configure the following:
+   - **Kind:** `SSH Username with private key`
+   - **Scope:** `Global (Jenkins, nodes, items, all child items, etc)`
+   - **ID:** `jenkins-agent-bot`
+   - **Description:** `SSH Key for GitHub repo write access`
+   - **Username:** `git`
+   - **Private Key:** Select **Enter directly**, click **Add**, and paste the private key (from [jenkins-agent-bot](file:///home/anouar.zerrik/projects/pfe/imperium-helm-k8s-infra/jenkins-agent-bot)):
+     ```text
+     -----BEGIN OPENSSH PRIVATE KEY-----
+     b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+     QyNTUxOQAAACDrJ/hM6QozVUydVlGUaAf9M/FR4LqdckrzX4P7XNfxDAAAAJhk39LFZN/S
+     xQAAAAtzc2gtZWQyNTUxOQAAACDrJ/hM6QozVUydVlGUaAf9M/FR4LqdckrzX4P7XNfxDA
+     AAAEBWh2DDXg5gOcZGPTY3zqY2H7K5pr7UZXV6Sw/hj0/4vesn+EzpCjNVTJ1WUZRoB/0z
+     8VHgup1ySvNfg/tc1/EMAAAAEWplbmtpbnMtYWdlbnQtYm90AQIDBA==
+     -----END OPENSSH PRIVATE KEY-----
+     ```
+5. Click **Create** / **Save**.
+
+### Step 3: Example Usage in Jenkins Pipeline
+You can now use this credential ID (`jenkins-agent-bot`) in your `Jenkinsfile` for git operations:
+
+```groovy
+stage('Checkout / Push') {
+    steps {
+        // Option 1: Standard Checkout
+        checkout([$class: 'GitSCM', 
+            branches: [[name: '*/main']], 
+            userRemoteConfigs: [[
+                url: 'git@github.com:ANZER03/imperium-helm-k8s-infra.git', 
+                credentialsId: 'jenkins-agent-bot'
+            ]]
+        ])
+        
+        // Option 2: Within an sshagent block for custom Git command scripts (e.g. tagging / pushing)
+        sshagent(credentials: ['jenkins-agent-bot']) {
+            sh '''
+                git config user.name "jenkins-agent-bot"
+                git config user.email "jenkins-agent-bot@users.noreply.github.com"
+                git tag -a v1.0.0 -m "Release version 1.0.0"
+                git push origin v1.0.0
+            '''
+        }
+    }
+}
+```
+
+---
+
+## 11. Kong API Gateway (Gateway API — Modern Setup)
+
+Kong is deployed as a subchart of the umbrella chart (`kong-gateway`), using the **Kong Gateway Operator (KGO)** and the **Kubernetes Gateway API** standard.
+
+### Architecture
+
+```
+[Client] → [DataPlane: Kong Proxy]  ← auto-provisioned by KGO
+                    ↑
+          [ControlPlane: Kong Admin]  ← auto-provisioned by KGO
+                    ↑
+        [kong-gw-controller-manager]  ← Kong Gateway Operator
+                    ↑
+         GatewayClass + Gateway CRs  ← defined in subchart templates
+```
+
+### Prerequisites (run ONCE before first deployment)
+
+**1. Install Kubernetes Gateway API CRDs:**
+```bash
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+```
+
+**2. Install Kong Operator CRDs (server-side apply — CRDs are too large for client-side):**
+```bash
+tar -xzf imperium-streaming-news-processing/charts/kong-gateway/charts/gateway-operator-0.6.1.tgz \
+  -C /tmp gateway-operator/crds/custom-resource-definitions.yaml
+
+kubectl apply --server-side -f /tmp/gateway-operator/crds/custom-resource-definitions.yaml
+```
+
+> [!IMPORTANT]
+> These steps must run **before** the first `helm upgrade --install` of the umbrella chart.
+> Same pattern as `clickstack-operators` — CRDs must exist before the operator starts.
+
+### Deploying / Upgrading
+
+```bash
+# Always re-package after editing anything inside charts/kong-gateway/
+helm dependency update ./imperium-streaming-news-processing
+helm upgrade --install imperium-streaming-news-processing ./imperium-streaming-news-processing -n imperium-news-ns
+```
+
+> [!WARNING]
+> Always run `helm dependency update` after editing files inside `charts/kong-gateway/` before
+> upgrading. The umbrella uses the packaged `.tgz`, not the live directory.
+
+### Verification
+
+```bash
+# Operator pod
+kubectl get pods -n imperium-news-ns | grep kong-gw
+
+# GatewayClass accepted
+kubectl get gatewayclass kong
+
+# Gateway programmed (ADDRESS = proxy IP is live)
+kubectl get gateway kong -n imperium-news-ns
+
+# Auto-provisioned ControlPlane + DataPlane pods
+kubectl get pods -n imperium-news-ns | grep -E "controlplane|dataplane"
+
+# Kong proxy LoadBalancer service
+kubectl get svc -n imperium-news-ns | grep dataplane-ingress
+```
+
+### Local Access (Port-Forward)
+
+```bash
+# No routes yet → Kong returns 404 (expected)
+kubectl port-forward svc/$(kubectl get svc -n imperium-news-ns -o name | grep dataplane-ingress | cut -d/ -f2) -n imperium-news-ns 8000:80
+curl http://localhost:8000
+```
+
+### Adding HTTPRoutes (next step)
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: my-service-route
+  namespace: imperium-news-ns
+spec:
+  parentRefs:
+    - name: kong
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: my-service
+          port: 8080
 ```

@@ -1,0 +1,31 @@
+# Kong Gateway subchart values
+# Passed through to the upstream kong/gateway-operator dependency
+
+gateway-operator:
+  # Short name override — prevents exceeding the 63-char k8s resource name limit
+  # when the umbrella release "imperium-streaming-news-processing" prefixes names.
+  fullnameOverride: "kong-gw"
+
+  # Kong Gateway Operator OSS — no Enterprise license needed
+  image:
+    tag: "1.6"
+
+
+  env:
+    # Opt out of anonymous usage reports
+    GATEWAY_OPERATOR_ANONYMOUS_REPORTS: "false"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Kong proxy settings (used in gateway.yaml template)
+proxy:
+  # Service type for the Kong proxy that KGO provisions
+  # LoadBalancer: k3s Klipper LB assigns a cluster node IP (recommended)
+  # NodePort: explicit port mapping on every node
+  serviceType: LoadBalancer

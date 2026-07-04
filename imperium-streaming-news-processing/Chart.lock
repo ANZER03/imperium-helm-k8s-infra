@@ -32,5 +32,8 @@ dependencies:
 - name: imperium-frontend
   repository: file://charts/imperium-frontend
   version: 0.1.0
-digest: sha256:55e677ad757005e4d81791bc6c91b372d723cec7f4b25e434c8130929e4d1e2c
-generated: "2026-07-02T01:59:43.805799836Z"
+- name: kong-gateway
+  repository: file://charts/kong-gateway
+  version: 0.1.0
+digest: sha256:bae92db81c5e5259ceed70d5e80ae4c8d94bd20ad422e290328957695974103b
+generated: "2026-07-03T23:03:20.314594798Z"

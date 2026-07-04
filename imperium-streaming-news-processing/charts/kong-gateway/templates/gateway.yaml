@@ -1,0 +1,18 @@
+---
+# Gateway — the actual API gateway instance.
+# Kong Gateway Operator watches this resource and automatically provisions:
+#   - A ControlPlane (Kong Admin API pod)
+#   - A DataPlane (Kong Proxy pod + Service)
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kong
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    konghq.com/gatewayclass-unmanaged: "true"
+spec:
+  gatewayClassName: kong
+  listeners:
+    - name: proxy
+      protocol: HTTP
+      port: 80

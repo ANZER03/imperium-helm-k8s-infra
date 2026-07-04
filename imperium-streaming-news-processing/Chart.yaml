@@ -67,3 +67,7 @@ dependencies:
     version: 0.1.0
     repository: "file://charts/imperium-frontend"
     condition: imperium-frontend.enabled
+  - name: kong-gateway
+    version: 0.1.0
+    repository: "file://charts/kong-gateway"
+    condition: kong-gateway.enabled

@@ -1,0 +1,9 @@
+---
+# GatewayClass — tells Kubernetes that "kong" is our gateway implementation.
+# Any Gateway resource that references this class will be managed by Kong Gateway Operator.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: kong
+spec:
+  controllerName: konghq.com/gateway-operator

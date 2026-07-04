@@ -1,0 +1,14 @@
+apiVersion: v2
+name: kong-gateway
+description: |
+  Kong Gateway Operator subchart for Imperium.
+  Deploys Kong Gateway Operator (KGO v1.6) which manages the Kong proxy
+  lifecycle via Kubernetes Gateway API standard resources.
+type: application
+version: 0.1.0
+appVersion: "1.6"
+
+dependencies:
+  - name: gateway-operator
+    version: 0.6.1
+    repository: "https://charts.konghq.com"

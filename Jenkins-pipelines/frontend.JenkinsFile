@@ -1,0 +1,155 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+    - sleep
+    args:
+    - 99d
+'''
+        }
+    }
+
+    environment {
+        // Helm repository and SSH credential from previous examples
+        HELM_REPO_URL = 'git@github.com:ANZER03/imperium-helm-k8s-infra.git'
+        GIT_CREDS_ID  = 'helm-repo-ssh-key'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Detect Changes') {
+            steps {
+                script {
+                    def changeDetected = false
+                    try {
+                        // Detect changes in frontend folder compared to the last commit
+                        def diff = sh(
+                            script: 'git diff --name-only HEAD~1 HEAD | grep "^frontend/" || true',
+                            returnStdout: true
+                        ).trim()
+                        if (diff) {
+                            changeDetected = true
+                        } else {
+                            echo "No changes detected in the 'frontend/' folder."
+                        }
+                    } catch (Exception e) {
+                        echo "Could not run git diff (possibly first commit on a new branch). Defaulting to build."
+                        changeDetected = true
+                    }
+                    env.FRONTEND_CHANGED = changeDetected.toString()
+                }
+            }
+        }
+
+        stage('Prepare Tags') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' }
+            }
+            steps {
+                script {
+                    // Extract short Git commit hash
+                    env.SHORT_SHA = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    
+                    // Determine current branch (fallback if BRANCH_NAME is empty)
+                    env.BRANCH = env.BRANCH_NAME ?: sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    
+                    // Clean branch name to make it a safe Docker tag
+                    env.CLEAN_BRANCH = env.BRANCH.replaceAll(/[^a-zA-Z0-9_.-]/, '-')
+                    
+                    echo "--- TAGGING INFO ---"
+                    echo "Commit SHA (short): ${env.SHORT_SHA}"
+                    echo "Branch name:        ${env.CLEAN_BRANCH}"
+                }
+            }
+        }
+
+        stage('Build & Tag Image') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' }
+            }
+            steps {
+                container('kaniko') {
+                    script {
+                        def registry = "registry.registry.svc.cluster.local:5000"
+                        def imageName = "imperium-frontend"
+                        
+                        // Define tag destinations (short commit SHA & branch name)
+                        def destinations = [
+                            "--destination=${registry}/${imageName}:${env.SHORT_SHA}",
+                            "--destination=${registry}/${imageName}:${env.CLEAN_BRANCH}"
+                        ]
+                        
+                        // Add 'latest' tag only for main/master branch builds
+                        if (env.BRANCH == 'main' || env.BRANCH == 'master') {
+                            destinations.add("--destination=${registry}/${imageName}:latest")
+                            echo "Adding 'latest' tag because branch is ${env.BRANCH}"
+                        }
+                        
+                        def destArgs = destinations.join(" ")
+                        
+                        // Kaniko context is set to the frontend folder
+                        sh """
+                        /kaniko/executor \
+                          --context=dir://frontend \
+                          --dockerfile=Dockerfile \
+                          ${destArgs} \
+                          --insecure \
+                          --insecure-registry=${registry}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Update Helm Repo') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' }
+            }
+            steps {
+                sshagent(credentials: [env.GIT_CREDS_ID]) {
+                    sh '''
+                    # Configure Git identity for Jenkins bot
+                    git config --global user.email "jenkins-bot@imperium.solutions"
+                    git config --global user.name "Jenkins Bot"
+                    git config --global core.sshCommand "ssh -o StrictHostKeyChecking=no"
+
+                    # Clone the Helm repo
+                    rm -rf helm-repo
+                    git clone ${HELM_REPO_URL} helm-repo
+                    cd helm-repo
+
+                    # Safely and precisely update the tag value in imperium-frontend/values.yaml using sed
+                    sed -i 's/^[[:space:]]*tag:.*/  tag: "'${SHORT_SHA}'"/' imperium-streaming-news-processing/charts/imperium-frontend/values.yaml
+
+
+                    # Commit and push changes back to the Helm repo
+                    git add imperium-streaming-news-processing/charts/imperium-frontend/values.yaml
+                    git commit -m "chore: update frontend image tag to ${SHORT_SHA} [skip ci]" || echo "No changes to commit"
+                    git push origin master
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
