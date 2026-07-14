@@ -3,6 +3,7 @@
 # Kong Gateway Operator watches this resource and automatically provisions:
 #   - A ControlPlane (Kong Admin API pod)
 #   - A DataPlane (Kong Proxy pod + Service)
+# sync-wave "2": applied after GatewayClass (wave 1) and the Gateway CRD (wave 0) are ready.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -10,6 +11,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     konghq.com/gatewayclass-unmanaged: "true"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   gatewayClassName: kong
   listeners:

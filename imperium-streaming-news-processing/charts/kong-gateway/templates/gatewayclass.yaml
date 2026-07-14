@@ -1,9 +1,12 @@
 ---
 # GatewayClass — tells Kubernetes that "kong" is our gateway implementation.
 # Any Gateway resource that references this class will be managed by Kong Gateway Operator.
+# sync-wave "1": applied after the gateway-operator (wave 0) installs the Gateway CRD.
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: kong
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   controllerName: konghq.com/gateway-operator

@@ -204,7 +204,7 @@ kubectl port-forward svc/registry -n registry 5000:5000
 
 ### ArgoCD (GitOps UI)
 ```bash
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+kubectl port-forward svc/argocd-server -n argocd 8082:443
 ```
 *Access at: https://localhost:8080*
 
